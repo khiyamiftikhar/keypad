@@ -1,0 +1,55 @@
+Inital line state will be IDLE
+The gpio interrupt will be enabled for negative edge 
+The state of the line will be UNCERTAIN
+On a negative edge, gpio interrupt will be disabled and timer will be started for 20 mill sec
+
+After 20 mill timer will run the callback
+Gpio level will be checked on callback, 
+if still low, then line state will be POSSIBLE_PRESS
+
+
+After 20 mill timer will run the callback
+Gpio level will be checked on callback, 
+if still low, then line state will be CONFIRM_PRESS
+
+So two consecutive lows gurantee the press.
+And if there is a high read, than go back one state.
+If goes back to IDLE, then enable the GPIO interrupt and disable the timer
+
+
+At CONFIRM_PRESS, 
+    gpio interuupt is enabled with posedge, 
+    and long press timer is started
+    And the event is propagated to user code
+If postive edge comes, interrupt is disabled and the bounce timer is started
+after bounce timer interrupts, the state progresses to POSSIBLE_RELEASE and then to CONFIRM POSSIBLE_RELEASE
+Same way state will return one state back if the value read is still LOW.
+If it comes back to confirm press, then again the bounce timer interrupt is disabled 
+If confirm relase then event is propagated to user code
+Meanwhile if long press timer event occurs then LONG_PRESS event is propagated
+and if repeat is enabled , then repeat timmer is started.
+
+
+What if another button is pressed
+
+If that button arrives at CERTAIN_PRESS state,  then    
+    LONG_PRESS TIMER is restarted 
+    REPEAT_TIMER is stopped
+
+The event propagated to the  user contains type(press, long press, repeat) and 'delta t' if press event
+For example if previous press was at 1 sec and next press was at 1.5 sec, so the delta t is 0.5 sec
+
+The getkey() function signature is as follows
+
+int getkey(uint8_t* key_list, uint8_t size);
+
+The return value is  the number of keys pressed
+The key_list is the array to which the key information is copied limited by its size
+So for example if 2 keys are pressed, and key_list has just 1 byte, then obviously only one member is read
+
+The algorithm it uses is, initially all inputs are pulled up with interrupt and all outputs are zero
+As soon as press is confirmed, the interrupts are disabled
+The input pins are all pulled down except
+the output pins are chnaged to 0111, and then 0 is rightshifted 1011,1101,1110
+So the value at which the selected input pin drops tells the other pin.
+Then output pins are changed back to 1111 and interrupt is enabled

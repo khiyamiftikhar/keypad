@@ -1,0 +1,8 @@
+menu "User Configuration String"
+    config UNIT_TESTING
+            #string "unit testing"
+            bool
+            default y
+            
+endmenu
+
