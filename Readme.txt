@@ -1,6 +1,6 @@
 About
 
-This is an interrupt based keypad library. It is designed and implemented using Object Oriented Design
+This is an interrupt based keypad library designed for ESPIDF. It is designed and implemented using Object Oriented Design
 concepts and program to interface concept.
 The interface implementation will be injected to the component that requires it to have dependency inversion
 using dependency injection.
