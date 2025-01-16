@@ -1,34 +1,49 @@
 #include "unity.h"
 #include "my_timer.h"
+#include "esp_log.h"
 
-
+static const char* TAG="test timer";
 
 void timer_callback(timer_event_t* event){
 
-    printf("event is %d",event->event_type);
+    ESP_LOGI(TAG,"event is %d",event->event_type);
 
 }
 
- static my_timer_t timer;
+ static my_timer_t oneshot_timer;
+ static my_timer_t periodic_timer;
 
-TEST_CASE("TIMER: Create","[Unit Test: Timer]"){
+TEST_CASE("TIMER: Create One shot","[Unit Test: Timer]"){
 
    
 
-   timerCreate(&timer);
-   timer.callback=timer_callback;
+   timerCreate(&oneshot_timer,TIMER_ONESHOT,&timer_callback);
+   
 
-   timer.long_press_interval=1000000;
-   timer.repeat_interval=2000000;
+   oneshot_timer.interface.timerSetInterval(&oneshot_timer.interface,10000000);
+   
+}
+
+TEST_CASE("TIMER: Create Periodic","[Unit Test: Timer]"){
+
+   
+
+timerCreate(&periodic_timer,TIMER_PERIODIC,&timer_callback);
+   
+
+periodic_timer.interface.timerSetInterval(&periodic_timer.interface,5000000);
    
 
 }
+
+
+
 
 
 TEST_CASE("TIMER: Start One Shot","[Unit Test: Timer]"){
 
     
-   timer.interface.timerLongPressStart(&(timer.interface));
+   oneshot_timer.interface.timerStart(&(oneshot_timer.interface));
    
 
 }
@@ -37,7 +52,26 @@ TEST_CASE("TIMER: Start One Shot","[Unit Test: Timer]"){
 TEST_CASE("TIMER: Start Periodic","[Unit Test: Timer]"){
 
     
-   timer.interface.timerRepeatStart(&(timer.interface));
+   periodic_timer.interface.timerStart(&(periodic_timer.interface));
    
 
 }
+
+
+TEST_CASE("TIMER: Stop One Shot","[Unit Test: Timer]"){
+
+    
+   oneshot_timer.interface.timerStop(&(oneshot_timer.interface));
+   
+
+}
+
+
+TEST_CASE("TIMER: Stop Periodic","[Unit Test: Timer]"){
+
+    
+   periodic_timer.interface.timerStop(&(periodic_timer.interface));
+   
+
+}
+

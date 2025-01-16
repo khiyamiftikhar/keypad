@@ -1,11 +1,12 @@
 #include <stdio.h>
 #include "esp_timer.h"
 #include "esp_err.h"
+#include "esp_log.h"
 #include "my_timer.h"
 
+static const char* TAG="timer impl";
+static void timer_callback(void* arg);
 
-static void periodic_timer_callback(void* arg);
-static void oneshot_timer_callback(void* arg);
 
 
 #define CONTAINER_OF(ptr, type, member) \
@@ -25,7 +26,7 @@ static void oneshot_timer_callback(void* arg);
 
 
 
-static int timerSetLongPressInterval(timer_interface_t* self,uint64_t long_press_interval){
+static int timerSetInterval(timer_interface_t* self,uint64_t interval){
 
     if(self==NULL)
         return -1;
@@ -35,60 +36,30 @@ static int timerSetLongPressInterval(timer_interface_t* self,uint64_t long_press
     if(my_timer==NULL)
         return -1;
 
-    my_timer->long_press_interval=long_press_interval;
-    return 0;
-
-}
-
-
-static int timerSetRepeatInterval(timer_interface_t* self,uint64_t repeat_interval){
-
-
-    if(self==NULL)
-        return -1;
-
-    my_timer_t* my_timer=container_of(self,my_timer_t,interface);
-
-    if(my_timer==NULL)
-        return -1;
-
-    my_timer->repeat_interval=repeat_interval;
+    my_timer->interval=interval;
     return 0;
 
 }
 
 
 
-static int timerLongPressStart(timer_interface_t* self){
-    if(self==NULL)
-        return -1;
-
-    my_timer_t* my_timer=container_of(self,my_timer_t,interface);
-
-    if(my_timer==NULL)
-        return -1;
 
 
     
-    return esp_timer_start_once((esp_timer_handle_t)my_timer->one_shot_timer, my_timer->long_press_interval);
     
-}
+    
 
-static int timerLongPressStop(timer_interface_t* self){
-    if(self==NULL)
-        return -1;
 
-    my_timer_t* my_timer=container_of(self,my_timer_t,interface);
 
-    if(my_timer==NULL)
-        return -1;
 
-    return esp_timer_stop((esp_timer_handle_t)my_timer->one_shot_timer);
-}
+
+
+
+
 
 
 //int (*timerLongPressReset)(struct timer_interface*);
-static int timerRepeatStart(timer_interface_t* self){
+static int timerStart(timer_interface_t* self){
 
     if(self==NULL)
         return -1;
@@ -96,13 +67,22 @@ static int timerRepeatStart(timer_interface_t* self){
     my_timer_t* my_timer=container_of(self,my_timer_t,interface);
 
     if(my_timer==NULL)
+ 
         return -1;
 
-    return esp_timer_start_periodic((esp_timer_handle_t)my_timer->periodic_timer, my_timer->repeat_interval);
+    ESP_LOGI(TAG," interval is %llu",my_timer->interval);
+    esp_err_t err;
+    if(my_timer->type==TIMER_PERIODIC)
+        err=esp_timer_start_periodic((esp_timer_handle_t)my_timer->timer_handle, my_timer->interval);
+    else{
+        err=esp_timer_start_once((esp_timer_handle_t)my_timer->timer_handle, my_timer->interval);
+
+    }
     
+    return err;
 }
 
-static int timerRepeatStop(timer_interface_t *  self){
+static int timerStop(timer_interface_t *  self){
     if(self==NULL)
         return -1;
 
@@ -111,7 +91,7 @@ static int timerRepeatStop(timer_interface_t *  self){
     if(my_timer==NULL)
         return -1;
 
-    return esp_timer_stop((esp_timer_handle_t)my_timer->periodic_timer);
+    return esp_timer_stop((esp_timer_handle_t)my_timer->timer_handle);
 
 
 }
@@ -142,9 +122,9 @@ static int timerRegisterCallback(timer_interface_t* self,void(*callback)(timer_e
 /// @brief Create a timer. Assign all the members their respective values
 /// @param self 
 /// @return 
-int timerCreate(my_timer_t* self){
+int timerCreate(my_timer_t* self, timer_type_t type, void (*callback)(timer_event_t*)){
 
-    if(self==NULL)
+    if(self==NULL || callback==NULL)
         return -1;
 
 
@@ -155,43 +135,47 @@ int timerCreate(my_timer_t* self){
      * 2. a one-shot timer which will fire after 5s, and re-start periodic
      *    timer with period of 1s.
      */
+        char* name;
+        if(type==TIMER_ONESHOT)
+            name="oneshot";
+        else if(type==TIMER_PERIODIC)
+            name="periodic";
+        else{
+            name="oneshot";
+            type=TIMER_ONESHOT;
+        }
 
-    const esp_timer_create_args_t periodic_timer_args = {
-            .callback = &periodic_timer_callback,
-            /* name is optional, but may help identify the timer when debugging */
-            .arg = (void*)self,
-            .name = "periodic"
-    };
+        
 
-    esp_timer_handle_t periodic_timer;
-    if(esp_timer_create(&periodic_timer_args, &periodic_timer)!=ESP_OK)
-        return -1;
-    /* The timer has been created but is not running yet */
+        const esp_timer_create_args_t timer_args = {
+                .callback = &timer_callback,
+                /* name is optional, but may help identify the timer when debugging */
+                .arg = (void*)self,
+                .name = name
+        };
 
-    const esp_timer_create_args_t oneshot_timer_args = {
-            .callback = &oneshot_timer_callback,
-            /* argument specified here will be passed to timer callback function */
-            .arg = (void*)self,
-            .name = "one-shot"
-    };
-    esp_timer_handle_t oneshot_timer;
-    if(esp_timer_create(&oneshot_timer_args, &oneshot_timer)!=ESP_OK)
-        return -1;
+        esp_timer_handle_t timer_handle;
+        if(esp_timer_create(&timer_args, &timer_handle)!=ESP_OK)
+            return -1;
+    
+        /* The timer has been created but is not running yet */
+
+    
 
 
-
-    self->one_shot_timer=(void*)oneshot_timer;
-    self->periodic_timer=(void*)periodic_timer;
-    self->interface.timerGetCurrentTime=timerGetCurrentTime;
-    self->interface.timerLongPressStart=timerLongPressStart;
-    self->interface.timerLongPressStop=timerLongPressStop;
-    self->interface.timerRepeatStart=timerRepeatStart;
-    self->interface.timerRepeatStop=timerRepeatStop;
+    self->timer_handle=(void*)timer_handle;
+    self->type=type;
+    self->callback=callback;
+    //self->interface.timerGetCurrentTime=timerGetCurrentTime;
+    self->interface.timerStart=timerStart;
+    self->interface.timerStop=timerStop;
+    self->interface.timerSetInterval=timerSetInterval;
     self->interface.timerRegisterCallback=timerRegisterCallback;
+    self->interface.timerGetCurrentTime=timerGetCurrentTime;
     /* Clean up and finish the example 
     ESP_ERROR_CHECK(esp_timer_stop(periodic_timer));
     ESP_ERROR_CHECK(esp_timer_delete(periodic_timer));
-    ESP_ERROR_CHECK(esp_timer_delete(oneshot_timer));
+    ESP_ERROR_CHECK(esp_timer_delete(longpress_timer));
         */
     return 0;
 }
@@ -203,49 +187,30 @@ int timerDestroy(my_timer_t* self){
     if(self==NULL)
         return -1;
 
-    esp_timer_handle_t periodic_timer=(esp_timer_handle_t)self->periodic_timer;
-    esp_timer_handle_t one_shot_timer=(esp_timer_handle_t)self->one_shot_timer;
-    
-
-    ESP_ERROR_CHECK(esp_timer_stop(periodic_timer));
-    ESP_ERROR_CHECK(esp_timer_stop(one_shot_timer));
-    ESP_ERROR_CHECK(esp_timer_delete(periodic_timer));
-    ESP_ERROR_CHECK(esp_timer_delete(one_shot_timer));
-        
+    esp_timer_handle_t timer_handle=(esp_timer_handle_t)self->timer_handle;
+    ESP_ERROR_CHECK(esp_timer_stop(timer_handle));
     return 0;
 
-
-
-
-
 }
 
 
 
 /// @brief Call back registered with the ESPIDF timer driver
 /// @param arg 
-static void periodic_timer_callback(void* arg){
+static void timer_callback(void* arg){
     
+
+    ESP_LOGI(TAG,"internal callback");
 
     my_timer_t* my_timer=(my_timer_t*)arg;
     timer_event_t event;
-    event.event_type=TIMER_REPEAT_EVENT;
+
+    //if(my_timer->type==TIMER_ONESHOT)
+    event.event_type=TIMER_EVENT_ELAPSED;
+
     //Call the callback registered by the user
     my_timer->callback(&event);
     
-}
-
-/// @brief Call back registered with the ESPIDF timer driver
-/// @param arg 
-static void oneshot_timer_callback(void* arg)
-{
-
-    my_timer_t* my_timer=(my_timer_t*)arg;
-    timer_event_t event;
-    event.event_type=TIMER_LONG_PRESS_EVENT;
-    //Call the callback registered by the user
-    printf("\nalarm");
-    my_timer->callback(&event);
 }
 
 

@@ -1,6 +1,7 @@
 
 #include <stdio.h>
 #include "driver/gpio.h"
+#include "gpio_interface.h"
 #include "my_gpio.h"
 
 
@@ -17,20 +18,20 @@ static void isr_handler(void* arg){
 }
 
 
-void gpioMode(gpio_interface_t* self, uint8_t gpio, gpio_mode mode){
+void gpioMode(gpio_interface_t* self, gpio_mode mode){
    
-
+    my_gpio_t* my_gpio=container_of(self,my_gpio_t,interface);
     esp_err_t err_check=0;
     gpio_config_t io_config;
 
     switch (mode){
         case INPUT     :           io_config.mode=GPIO_MODE_INPUT;         io_config.pull_up_en=0;    break;
-        case INPUT_PULLUP   :           io_config.mode=GPIO_MODE_INPUT;         io_config.pull_up_en=1;    break;
+        case INPUT_PULLUP   :      io_config.mode=GPIO_MODE_INPUT;         io_config.pull_up_en=1;    break;
         case OUTPUT    :           io_config.mode=GPIO_MODE_OUTPUT;        io_config.pull_up_en=0;    break;
-        default             :           io_config.mode=GPIO_MODE_INPUT;         io_config.pull_up_en=0;    break;
+        default             :      io_config.mode=GPIO_MODE_INPUT;         io_config.pull_up_en=0;    break;
     }
     
-    io_config.pin_bit_mask=(1ULL<<gpio);
+    io_config.pin_bit_mask=(1ULL<<my_gpio->number);
       
     
     io_config.intr_type=GPIO_INTR_DISABLE;
@@ -45,7 +46,17 @@ void gpioMode(gpio_interface_t* self, uint8_t gpio, gpio_mode mode){
     
     
 }
-void (*digitalWrite)(gpio_interface_t* self, uint8_t gpio, uint8_t value);  // Use GPIO number
+int digitalWrite(gpio_interface_t* self,uint8_t value){
+
+    if(self==NULL)
+        return -1;
+    my_gpio_t* my_gpio=container_of(self,my_gpio_t,interface);
+
+    gpio_set_level()
+
+
+
+}
 uint8_t (*digitalRead)(gpio_interface_t* self, uint8_t gpio);  // Use GPIO number
 
 
@@ -77,4 +88,4 @@ void attachInterrupt(gpio_interface_t* self, uint8_t gpio, void (*callback)(gpio
 void (*detachInterrupt)(gpio_interface_t* self, uint8_t gpio);  // Use GPIO number
 
 
-
+*/

@@ -10,7 +10,7 @@ set(EXTRA_COMPONENT_DIRS "../components"  "$ENV{IDF_PATH}/tools/unit-test-app/co
 # - when invoking CMake directly: cmake -D TEST_COMPONENTS="xxxxx" ..
 # - when using idf.py: idf.py -T xxxxx build
 #
-#set(TEST_COMPONENTS "05HAL" CACHE STRING "List of components to test")
+#
 set(TEST_COMPONENTS "timer_impl")
 set(CONFIG_UNIT_TESTING 0)
 
