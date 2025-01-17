@@ -11,7 +11,7 @@ set(EXTRA_COMPONENT_DIRS "../components"  "$ENV{IDF_PATH}/tools/unit-test-app/co
 # - when using idf.py: idf.py -T xxxxx build
 #
 #
-set(TEST_COMPONENTS "timer_impl")
+set(TEST_COMPONENTS "timer_impl" "gpio_interface_gpio_impl")
 set(CONFIG_UNIT_TESTING 0)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)

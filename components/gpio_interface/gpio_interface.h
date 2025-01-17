@@ -8,24 +8,19 @@ typedef enum {
     INPUT,
     OUTPUT,
     INPUT_PULLUP,
-    INPUT_PULLDOWN
+    INPUT_PULLDOWN,
+    INPUT_OUTPUT
+
 } gpio_mode;
 
 // Enum for interrupt modes
 typedef enum {
-    RISING,
+    RISING=1,
     FALLING,
     CHANGE
 } interrupt_mode;
 
 
-typedef enum {
-    LOW,
-    HIGH,
-    RISING,
-    FALLING,
-    CHANGE
-} interrupt_mode;
 
 
 typedef enum {
@@ -37,11 +32,14 @@ typedef enum {
 
 // GPIO interface struct
 typedef struct gpio_interface {
-    void (*gpioMode)(gpio_interface_t* self, uint8_t gpio, gpio_mode mode);   // Use GPIO number
-    void (*digitalWrite)(gpio_interface_t* self, uint8_t gpio, uint8_t value);  // Use GPIO number
-    uint8_t (*digitalRead)(gpio_interface_t* self, uint8_t gpio);  // Use GPIO number
-    void (*attachInterrupt)(gpio_interface_t* self, uint8_t gpio, void (*callback)(gpio_event_t), interrupt_mode mode,void* context);  // Use GPIO number
-    void (*detachInterrupt)(gpio_interface_t* self, uint8_t gpio);  // Use GPIO number
+   int (*gpioMode)(struct gpio_interface* self, gpio_mode mode);   // Use GPIO number
+    int (*digitalWrite)(struct gpio_interface* self, uint8_t value);  // Use GPIO number
+    int (*digitalRead)(struct gpio_interface* self);  // Use GPIO number
+    int (*attachInterrupt)(struct gpio_interface* self, void (*callback)(gpio_event_t), interrupt_mode mode);  // Use GPIO number
+    int (*detachInterrupt)(struct gpio_interface* self);  // Use GPIO number
+    int (*enableInterrupt)(struct gpio_interface* self);
+    int (*disableInterrupt)(struct gpio_interface* self);
+
 }gpio_interface_t;
 
 

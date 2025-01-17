@@ -6,7 +6,7 @@
 
 
 
-typedef struct my_gpio my_gpio_t;
+
 
 typedef struct my_gpio{
     uint8_t number;
@@ -15,7 +15,7 @@ typedef struct my_gpio{
 }my_gpio_t;
 
 
-
+int gpioCreate(my_gpio_t* my_gpio,uint8_t number);
 
 
 #endif
