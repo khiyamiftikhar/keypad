@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <string.h>
+
 #include "esp_timer.h"
 #include "esp_err.h"
 #include "esp_log.h"
@@ -59,7 +61,7 @@ static int timerSetInterval(timer_interface_t* self,uint64_t interval){
 
 
 //int (*timerLongPressReset)(struct timer_interface*);
-static int timerStart(timer_interface_t* self){
+static int timerStart(timer_interface_t* self,timer_run_type_t run_type){
 
     if(self==NULL)
         return -1;
@@ -72,7 +74,7 @@ static int timerStart(timer_interface_t* self){
 
     ESP_LOGI(TAG," interval is %llu",my_timer->interval);
     esp_err_t err;
-    if(my_timer->type==TIMER_PERIODIC)
+    if(run_type==TIMER_PERIODIC)
         err=esp_timer_start_periodic((esp_timer_handle_t)my_timer->timer_handle, my_timer->interval);
     else{
         err=esp_timer_start_once((esp_timer_handle_t)my_timer->timer_handle, my_timer->interval);
@@ -122,7 +124,9 @@ static int timerRegisterCallback(timer_interface_t* self,void(*callback)(timer_e
 /// @brief Create a timer. Assign all the members their respective values
 /// @param self 
 /// @return 
-int timerCreate(my_timer_t* self, timer_type_t type, void (*callback)(timer_event_t*)){
+int timerCreate(my_timer_t* self, char* name,void (*callback)(timer_event_t*)){
+
+    char timer_name[10];
 
     if(self==NULL || callback==NULL)
         return -1;
@@ -135,36 +139,27 @@ int timerCreate(my_timer_t* self, timer_type_t type, void (*callback)(timer_even
      * 2. a one-shot timer which will fire after 5s, and re-start periodic
      *    timer with period of 1s.
      */
-        char* name;
-        if(type==TIMER_ONESHOT)
-            name="oneshot";
-        else if(type==TIMER_PERIODIC)
-            name="periodic";
-        else{
-            name="oneshot";
-            type=TIMER_ONESHOT;
-        }
 
-        
+    strncpy(timer_name,name,10);
+    timer_name[9]='\0'; //strncpy does not null terminate if source string is >= n i.e 10 here   
 
-        const esp_timer_create_args_t timer_args = {
-                .callback = &timer_callback,
-                /* name is optional, but may help identify the timer when debugging */
-                .arg = (void*)self,
-                .name = name
-        };
+    const esp_timer_create_args_t timer_args = {
+            .callback = &timer_callback,
+            /* name is optional, but may help identify the timer when debugging */
+            .arg = (void*)self,
+            .name = timer_name
+    };
 
-        esp_timer_handle_t timer_handle;
-        if(esp_timer_create(&timer_args, &timer_handle)!=ESP_OK)
-            return -1;
-    
-        /* The timer has been created but is not running yet */
+    esp_timer_handle_t timer_handle;
+    if(esp_timer_create(&timer_args, &timer_handle)!=ESP_OK)
+        return -1;
 
-    
+    /* The timer has been created but is not running yet */
+
+
 
 
     self->timer_handle=(void*)timer_handle;
-    self->type=type;
     self->callback=callback;
     //self->interface.timerGetCurrentTime=timerGetCurrentTime;
     self->interface.timerStart=timerStart;

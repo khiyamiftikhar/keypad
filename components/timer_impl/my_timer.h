@@ -11,7 +11,7 @@
 
 typedef struct my_timer{
     uint64_t interval;         //Time after which alarm will trigger;
-    timer_type_t type;          //single shot or periodic
+    
     void* timer_handle;               //timer object of espidf
     void (*callback)(timer_event_t*);
     timer_interface_t interface;
@@ -19,7 +19,7 @@ typedef struct my_timer{
 }my_timer_t;
 
 
-int timerCreate(my_timer_t* self, timer_type_t type, void (*callback)(timer_event_t*));
+int timerCreate(my_timer_t* self,char* name, void (*callback)(timer_event_t*));
 
 
 int timerDestroy(my_timer_t* self);

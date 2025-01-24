@@ -32,7 +32,7 @@ typedef enum {
 
 // GPIO interface struct
 typedef struct gpio_interface {
-   int (*gpioMode)(struct gpio_interface* self, gpio_mode mode);   // Use GPIO number
+    int (*gpioMode)(struct gpio_interface* self, gpio_mode mode);   // Use GPIO number
     int (*digitalWrite)(struct gpio_interface* self, uint8_t value);  // Use GPIO number
     int (*digitalRead)(struct gpio_interface* self);  // Use GPIO number
     int (*attachInterrupt)(struct gpio_interface* self, void (*callback)(gpio_event_t), interrupt_mode mode);  // Use GPIO number
