@@ -28,21 +28,30 @@ static void isr_handler(void* arg){
 }
 
 
-int gpioMode(gpio_interface_t* self, gpio_mode mode){
+int gpioMode(gpio_interface_t* self, gpio_mode_t mode){
    
     my_gpio_t* my_gpio=container_of(self,my_gpio_t,interface);
     esp_err_t err_check=0;
     gpio_config_t io_config;
 
+    my_gpio->mode=mode;
+
     switch (mode){
-        case INPUT     :           io_config.mode=GPIO_MODE_INPUT;         io_config.pull_up_en=0;    break;
-        case INPUT_PULLUP   :      io_config.mode=GPIO_MODE_INPUT;         io_config.pull_up_en=1;    break;
-        case OUTPUT    :           io_config.mode=GPIO_MODE_OUTPUT;        io_config.pull_up_en=0;    break;
-        case INPUT_OUTPUT    :     io_config.mode=GPIO_MODE_INPUT_OUTPUT;        io_config.pull_up_en=0;    break;
+        case GPIO_MODE_INPUT     :            io_config.mode=GPIO_MODE_INPUT;   io_config.pull_up_en=0;    
+                                    
+                                    break;
+        case GPIO_MODE_INPUT_PULLUP   :       io_config.mode=GPIO_MODE_INPUT;   io_config.pull_up_en=1;    
+                                    
+                                    break;
 
-
-        
-        default             :      io_config.mode=GPIO_MODE_INPUT;         io_config.pull_up_en=0;    break;
+        case GPIO_MODE_OUTPUT    :            io_config.mode=GPIO_MODE_OUTPUT;  io_config.pull_up_en=0;
+                                    
+                                    break;
+        case GPIO_MODE_INPUT_OUTPUT    :     io_config.mode=GPIO_MODE_INPUT_OUTPUT;        io_config.pull_up_en=0;    
+                                    break;
+                                    
+    
+        default             :      io_config.mode=GPIO_MODE_INPUT;   io_config.pull_up_en=0;    break;
     }
     
 
@@ -91,9 +100,9 @@ int attachInterrupt(gpio_interface_t* self, void (*callback)(gpio_event_t), inte
     my_gpio->callback=callback;
 
     switch(mode){
-        case RISING:    mode=GPIO_INTR_POSEDGE; break;
-        case FALLING:   mode=GPIO_INTR_NEGEDGE; break;
-        case CHANGE:    mode=GPIO_INTR_ANYEDGE; break;
+        case GPIO_INTERRUPT_MODE_RISING:    mode=GPIO_INTR_POSEDGE; break;
+        case GPIO_INTERRUPT_MODE_FALLING:   mode=GPIO_INTR_NEGEDGE; break;
+        case GPIO_INTERRUPT_MODE_CHANGE:    mode=GPIO_INTR_ANYEDGE; break;
         default:        mode=GPIO_INTR_ANYEDGE;
     }
 
@@ -142,6 +151,7 @@ int gpioCreate(my_gpio_t* my_gpio,uint8_t number){
         return -1;
     
     my_gpio->number=number;
+    my_gpio->mode=GPIO_MODE_INPUT;
     my_gpio->interface.attachInterrupt=attachInterrupt;
     my_gpio->interface.digitalRead=digitalRead;
     my_gpio->interface.digitalWrite=digitalWrite;

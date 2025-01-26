@@ -26,14 +26,14 @@ TEST_CASE("GPIO: Create gpio","[Unit Test: GPIO]"){
 
 TEST_CASE("GPIO: Set Mode input","[Unit Test: GPIO]"){
 
-   my_gpio.interface.gpioMode(&my_gpio.interface,INPUT_PULLUP);
+   my_gpio.interface.gpioMode(&my_gpio.interface,GPIO_MODE_INPUT_PULLUP);
    
 
 }
 
 TEST_CASE("GPIO: Set Mode output (for LED)","[Unit Test: GPIO]"){
 
-   debug_gpio.interface.gpioMode(&debug_gpio.interface,INPUT_OUTPUT);
+   debug_gpio.interface.gpioMode(&debug_gpio.interface,GPIO_MODE_INPUT_OUTPUT);
 
 }
 
