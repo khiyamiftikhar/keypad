@@ -33,7 +33,7 @@ struct timer_interface{
     int (*timerStart)(struct timer_interface*,timer_run_type_t type);   //Run once or periodic
     int (*timerStop)(struct timer_interface*);
     uint64_t (*timerGetCurrentTime)();   // Static method, means class method and not instance method
-    int (*timerRegisterCallback)(struct timer_interface*,void(*callback)(timer_event_t*));
+    int (*timerRegisterCallback)(struct timer_interface*,void(*callback)(timer_event_t));
 };
 
 typedef struct timer_interface timer_interface_t;

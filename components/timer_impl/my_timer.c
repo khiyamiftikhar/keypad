@@ -104,7 +104,7 @@ static uint64_t timerGetCurrentTime(void){
 
 
 
-static int timerRegisterCallback(timer_interface_t* self,void(*callback)(timer_event_t*)){
+static int timerRegisterCallback(timer_interface_t* self,void(*callback)(timer_event_t)){
 
     if(self==NULL)
         return -1;
@@ -124,7 +124,7 @@ static int timerRegisterCallback(timer_interface_t* self,void(*callback)(timer_e
 /// @brief Create a timer. Assign all the members their respective values
 /// @param self 
 /// @return 
-int timerCreate(my_timer_t* self, char* name,void (*callback)(timer_event_t*)){
+int timerCreate(my_timer_t* self, char* name,void (*callback)(timer_event_t)){
 
     char timer_name[10];
 
@@ -201,10 +201,10 @@ static void timer_callback(void* arg){
     timer_event_t event;
 
     //if(my_timer->type==TIMER_ONESHOT)
-    event.event_type=TIMER_EVENT_ELAPSED;
+    event=TIMER_EVENT_ELAPSED;
 
     //Call the callback registered by the user
-    my_timer->callback(&event);
+    my_timer->callback(event);
     
 }
 

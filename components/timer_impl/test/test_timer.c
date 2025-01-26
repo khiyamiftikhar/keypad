@@ -4,7 +4,7 @@
 
 static const char* TAG="test timer";
 
-void timer_callback(timer_event_t* event){
+void timer_callback(timer_event_t event){
 
     ESP_LOGI(TAG,"event is %d",event->event_type);
 
