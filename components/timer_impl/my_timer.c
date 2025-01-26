@@ -106,7 +106,7 @@ static uint64_t timerGetCurrentTime(void){
 
 static int timerRegisterCallback(timer_interface_t* self,void(*callback)(timer_event_t*)){
 
-    if(self==NULL || callback==NULL)
+    if(self==NULL)
         return -1;
 
     my_timer_t* my_timer=container_of(self,my_timer_t,interface);
