@@ -6,6 +6,8 @@
 #include "esp_log.h"
 #include "my_timer.h"
 
+#define     MAX_OBJECTS         CONFIG_MAX_OBJECTS
+
 static const char* TAG="timer impl";
 static void timer_callback(void* arg);
 
@@ -24,9 +26,28 @@ static void timer_callback(void* arg);
 
 
 
+
+typedef struct my_timer{
+    uint64_t interval;         //Time after which alarm will trigger; private but set using interface
+    timer_run_type_t type;      //used when restarting, private data internally managed
+    esp_timer_handle_t timer_handle;               //timer object of espidf, private data internally managed
+    void (*callback)(timer_event_t);
+    timer_interface_t interface;
     
+}my_timer_t;
 
 
+//Dont confuse this with the pool alloc component which is for dynamic alloc/free
+//This is basic structure for statically allocating object
+
+typedef struct timer_pool{
+
+    my_timer_t timer_list[MAX_OBJECTS];
+    uint8_t count;
+}timer_pool_t;
+
+
+static timer_pool_t timers={0};
 
 static int timerSetInterval(timer_interface_t* self,uint64_t interval){
 
@@ -74,15 +95,19 @@ static int timerStart(timer_interface_t* self,timer_run_type_t run_type){
 
     ESP_LOGI(TAG," interval is %llu",my_timer->interval);
     esp_err_t err;
+    my_timer->type=run_type;
     if(run_type==TIMER_PERIODIC)
-        err=esp_timer_start_periodic((esp_timer_handle_t)my_timer->timer_handle, my_timer->interval);
+        err=esp_timer_start_periodic(my_timer->timer_handle, my_timer->interval);
     else{
-        err=esp_timer_start_once((esp_timer_handle_t)my_timer->timer_handle, my_timer->interval);
+        err=esp_timer_start_once(my_timer->timer_handle, my_timer->interval);
 
     }
     
     return err;
 }
+
+
+
 
 static int timerStop(timer_interface_t *  self){
     if(self==NULL)
@@ -93,10 +118,37 @@ static int timerStop(timer_interface_t *  self){
     if(my_timer==NULL)
         return -1;
 
-    return esp_timer_stop((esp_timer_handle_t)my_timer->timer_handle);
+    return esp_timer_stop(my_timer->timer_handle);
 
 
 }
+
+static int timerRestart(timer_interface_t* self){
+
+    if(self==NULL)
+        return -1;
+
+    my_timer_t* my_timer=container_of(self,my_timer_t,interface);
+
+    if(my_timer==NULL)
+         return -1;
+    timer_run_type_t run_type=my_timer->type;
+
+    ESP_LOGI(TAG," interval is %llu",my_timer->interval);
+    esp_err_t err;
+
+    esp_timer_stop(my_timer->timer_handle);
+
+    if(run_type==TIMER_PERIODIC)
+        err=esp_timer_start_periodic(my_timer->timer_handle, my_timer->interval);
+    else{
+        err=esp_timer_start_once(my_timer->timer_handle, my_timer->interval);
+
+    }
+    
+    return err;
+}
+
 
 static uint64_t timerGetCurrentTime(void){
     return esp_timer_get_time();
@@ -118,18 +170,56 @@ static int timerRegisterCallback(timer_interface_t* self,void(*callback)(timer_e
 }
 
 
+int timerDestroy(timer_interface_t* self){
+
+    if(self==NULL)
+        return -1;
+    
+
+    my_timer_t* my_timer=container_of(self,my_timer_t,interface);
+
+    esp_timer_handle_t timer_handle=my_timer->timer_handle;
+    ESP_ERROR_CHECK(esp_timer_stop(timer_handle));
+    return 0;
+
+}
+
+
+
+/// @brief Get one element of pool, and increment the count. Not thread safe
+/// @return 
+static my_timer_t* poolGet(){
+    
+    if(timers.count==MAX_OBJECTS)
+        return NULL;
+
+    my_timer_t* self=&timers.timer_list[timers.count];
+        timers.count++;
+    return self;
+}
+
+static void poolReturn(){
+
+    timers.count--;
+
+}
+
+
 
 
 
 /// @brief Create a timer. Assign all the members their respective values
 /// @param self 
 /// @return 
-int timerCreate(my_timer_t* self, char* name,void (*callback)(timer_event_t)){
+timer_interface_t* timerCreate(char* name,void (*callback)(timer_event_t)){
 
     char timer_name[10];
+    my_timer_t* self=poolGet();
 
+    
+    
     if(self==NULL || callback==NULL)
-        return -1;
+        return NULL;
 
 
 
@@ -152,41 +242,33 @@ int timerCreate(my_timer_t* self, char* name,void (*callback)(timer_event_t)){
 
     esp_timer_handle_t timer_handle;
     if(esp_timer_create(&timer_args, &timer_handle)!=ESP_OK)
-        return -1;
+        return NULL;
 
     /* The timer has been created but is not running yet */
 
 
 
 
-    self->timer_handle=(void*)timer_handle;
+    self->timer_handle=timer_handle;
     self->callback=callback;
     //self->interface.timerGetCurrentTime=timerGetCurrentTime;
     self->interface.timerStart=timerStart;
     self->interface.timerStop=timerStop;
+    self->interface.timerRestart=timerRestart;
     self->interface.timerSetInterval=timerSetInterval;
     self->interface.timerRegisterCallback=timerRegisterCallback;
     self->interface.timerGetCurrentTime=timerGetCurrentTime;
+    self->interface.timerDestroy=timerDestroy;
     /* Clean up and finish the example 
     ESP_ERROR_CHECK(esp_timer_stop(periodic_timer));
     ESP_ERROR_CHECK(esp_timer_delete(periodic_timer));
     ESP_ERROR_CHECK(esp_timer_delete(longpress_timer));
         */
-    return 0;
+    return &self->interface;
 }
 
 
 
-int timerDestroy(my_timer_t* self){
-
-    if(self==NULL)
-        return -1;
-
-    esp_timer_handle_t timer_handle=(esp_timer_handle_t)self->timer_handle;
-    ESP_ERROR_CHECK(esp_timer_stop(timer_handle));
-    return 0;
-
-}
 
 
 
