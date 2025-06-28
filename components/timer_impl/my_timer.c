@@ -31,9 +31,9 @@ typedef struct my_timer{
     uint64_t interval;         //Time after which alarm will trigger; private but set using interface
     timer_run_type_t type;      //used when restarting, private data internally managed
     esp_timer_handle_t timer_handle;               //timer object of espidf, private data internally managed
-    void (*callback)(timer_event_t);
+    timerCallback callback;
     timer_interface_t interface;
-    
+    void* context;      //For callback , so that user extracts the self of the struct for which this timer is a pointer member    
 }my_timer_t;
 
 
@@ -156,14 +156,27 @@ static uint64_t timerGetCurrentTime(void){
 
 
 
-static int timerRegisterCallback(timer_interface_t* self,void(*callback)(timer_event_t)){
+static int timerRegisterCallback(timer_interface_t* self,timerCallback cb){
 
     if(self==NULL)
         return -1;
 
     my_timer_t* my_timer=container_of(self,my_timer_t,interface);
 
-    my_timer->callback=callback;
+    my_timer->callback=cb;
+
+    return 0;
+
+}
+
+static int timerRegisterContext(timer_interface_t* self,void* context){
+
+    if(self==NULL)
+        return -1;
+
+    my_timer_t* my_timer=container_of(self,my_timer_t,interface);
+
+    my_timer->context=context;
 
     return 0;
 
@@ -210,15 +223,16 @@ static void poolReturn(){
 
 /// @brief Create a timer. Assign all the members their respective values
 /// @param self 
+/// @param context This timer returns timer_interface pointer which could be pointer member of a struct which can have multiple instance. So context to figure out which instance
 /// @return 
-timer_interface_t* timerCreate(char* name,void (*callback)(timer_event_t)){
+timer_interface_t* timerCreate(char* name,timerCallback cb){
 
     char timer_name[10];
     my_timer_t* self=poolGet();
 
     
     
-    if(self==NULL || callback==NULL)
+    if(self==NULL || cb==NULL)
         return NULL;
 
 
@@ -250,7 +264,8 @@ timer_interface_t* timerCreate(char* name,void (*callback)(timer_event_t)){
 
 
     self->timer_handle=timer_handle;
-    self->callback=callback;
+    self->callback=cb;
+    //self->context=context;
     //self->interface.timerGetCurrentTime=timerGetCurrentTime;
     self->interface.timerStart=timerStart;
     self->interface.timerStop=timerStop;
@@ -259,6 +274,7 @@ timer_interface_t* timerCreate(char* name,void (*callback)(timer_event_t)){
     self->interface.timerRegisterCallback=timerRegisterCallback;
     self->interface.timerGetCurrentTime=timerGetCurrentTime;
     self->interface.timerDestroy=timerDestroy;
+    
     /* Clean up and finish the example 
     ESP_ERROR_CHECK(esp_timer_stop(periodic_timer));
     ESP_ERROR_CHECK(esp_timer_delete(periodic_timer));
@@ -286,7 +302,7 @@ static void timer_callback(void* arg){
     event=TIMER_EVENT_ELAPSED;
 
     //Call the callback registered by the user
-    my_timer->callback(event);
+    my_timer->callback(event,my_timer->context);
     
 }
 
