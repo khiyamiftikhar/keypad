@@ -13,10 +13,18 @@
 #include "probe_manager.h"
 #include "keypad_button.h"
 
-#define QUEUE_LENGTH               50
+
 #define MAX_KEYPADS              CONFIG_MAX_KEYPADS
-#define MAX_SIMULTANEOUS_KEYS    MAX_SIMULTANEOUS_KEYS
+#define MAX_SIMULTANEOUS_KEYS    CONFIG_MAX_SIMULTANEOUS_KEYS
 #define MAX_BUTTONS             (KPAD_MAX_COLS*KPAD_MAX_ROWS)
+
+//These #defines are internal
+//This first queue is the one that gets both scanner and timer events and passes to the corresponding button
+#define INTERNAL_EVENT_QUEUE_ELEMENTS               100
+//This queue gets the user evebts   
+#define USER_EVENT_QUEUE_ELEMENTS                   50
+
+//#define QUEUE_LENGTH                                100
 
 static const char* TAG="keypad";
 
@@ -30,10 +38,15 @@ static const char* TAG="keypad";
         (type *)( (char *)__mptr - offsetof(type,member) );})
 
 
-typedef struct queue_data{
-    //connection_event_t event;
-    uint64_t time_stamp;
-}queue_data_t;
+typedef struct queue_internal_event_handle{
+    QueueHandle_t handle;
+    StaticQueue_t queue_meta_data;
+    uint8_t buff[sizeof(void*)*MAX_ELEMENTS];      //This must be equal to total void pointers, sizeof(void*)*total_elements
+    //size_t object_size;         //Not required as it is a void pointer
+}queue_internal_event_handle_t;
+
+
+
 
 
 typedef struct keypad_dev{
@@ -120,11 +133,45 @@ static void copyUserParameters(keypad_dev_t* self,keypad_config_t* config){
 static void callbackForScanner(scanner_event_data_t* event_data,void* context){
 
     //Get the keypad_dev_t instance
-    scanner_interface_t** scanner_member_address=(scanner_interface_t**) context;
-    keypad_dev_t* self=container_of(scanner_member_address,keypad_dev_t,scanner);
+    keypad_dev_t* self=(keypad_dev_t*)context;
     
 
 }
+
+
+static void buttonHandler(uint8_t button_id,button_event_data_t* evt,void* context){
+
+    keypad_dev_t* self=(keypad_dev_t*) context;
+
+}
+
+static esp_err_t configKeypadButtons(keypad_dev_t* self,uint8_t total_buttons){
+
+    button_config_t config={0};
+    config.scan_time_period=self->prober.time_period;
+    config.cb=buttonHandler;
+    config.context=(void*)self;
+    config.timer_pool=self->timer_pool;
+    
+    
+    for(uint8_t i=0;i<total_buttons;i++){
+        config.button_index=i;    
+        self->button[i]=keypadButtonCreate(&config);
+        if(self->button==NULL)
+            return ESP_FAIL;
+    }
+
+
+    return ESP_OK;
+
+}
+
+
+
+
+
+
+
 
 
 //This same array is used both by prober and scanner
@@ -150,22 +197,24 @@ static esp_err_t configKeypadOutput(prober_t* self,uint8_t* output_gpio,uint8_t 
 }
 
 static void timerCallback(timer_event_t event,void* context){
-    timer_interface_t** timer_member_address=(timer_interface_t**) context;
-    keypad_dev_t* self=container_of(timer_member_address,keypad_dev_t,timers);
+    
+    keypad_dev_t* self=(keypad_dev_t*) context;
 
 
 }
 
-static esp_err_t configKeypadTimers(timer_interface_t** timer,uint8_t total_timers){
+static esp_err_t configKeypadTimers(keypad_dev_t* self,uint8_t total_timers){
 
     char name[10];
 
-    void* context=(void*)timer;
+    timer_interface_t** timer_array=self->timers;
+    void* context = (void*)self;
+    //void* context=(void*)t;
     for(uint8_t i=0;i<total_timers;i++){
 
         sprintf(name,"timer %d",i);
-        timer[i]=timerCreate(name,timerCallback,context);
-        if(timer[i]==NULL)
+        timer_array[i]=timerCreate(name,timerCallback,context);
+        if(timer_array[i]==NULL)
             return ESP_FAIL;
 
     }
@@ -201,10 +250,10 @@ static esp_err_t configTimerPool(pool_alloc_interface_t* pool,timer_interface_t*
 /// @param total_inputs Total gpios
 /// @param total_outputs Total outputs of matrix keypad, each with different pwm signal and thus different signal
 /// @return 
-static esp_err_t configKeypadInput(scanner_interface_t** self,uint8_t* input_gpio,uint8_t total_inputs,uint8_t total_outputs){
+static esp_err_t configKeypadInput(keypad_dev_t* self,uint8_t* input_gpio,uint8_t total_inputs,uint8_t total_outputs){
 
     scanner_config_t config={0};
-    scanner_interface_t * scn=*self;
+    scanner_interface_t * scn=self->scanner;
 
     config.gpio_no=input_gpio;
     config.total_gpio=total_inputs;
@@ -216,9 +265,9 @@ static esp_err_t configKeypadInput(scanner_interface_t** self,uint8_t* input_gpi
     config.cb=callbackForScanner;
     
     //Assigning the scanner member of the self
-    self=scannerCreate(&config);
+    scn=scannerCreate(&config);
 
-    if(self==NULL)
+    if(scn==NULL)
         return ESP_FAIL;
 
     return ESP_OK;
@@ -232,16 +281,16 @@ static esp_err_t configKeypadInput(scanner_interface_t** self,uint8_t* input_gpi
 keypad_interface_t* keypadCreate(keypad_config_t* config){
 
 
-    keypad_dev_t* keypad=poolGet();
+    keypad_dev_t* self=poolGet();
     int ret;
-    if(keypad==NULL || config==NULL)
+    if(self==NULL || config==NULL)
         return NULL;
-    copyUserParameters(keypad,config);
+    copyUserParameters(self,config);
     //Here we are sending address bcz argument is double pointer and it is required to have the address of this pointer member inside the struct
-    ret=configKeypadInput(&keypad->scanner,keypad->col_gpio,keypad->total_cols,keypad->total_rows);
+    ret=configKeypadInput(self,self->col_gpio,self->total_cols,self->total_rows);
     ESP_LOGI(TAG,"scanner %d",ret);
     //This is already an instance member so argument is single pointer. No context is required for this since no callback
-    ret=configKeypadOutput(&keypad->prober,keypad->row_gpios,keypad->total_rows);
+    ret=configKeypadOutput(&self->prober,self->row_gpios,self->total_rows);
     ESP_LOGI(TAG,"prober %d",ret);
 
     
