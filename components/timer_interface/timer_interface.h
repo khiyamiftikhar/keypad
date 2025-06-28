@@ -27,13 +27,16 @@ typedef struct timer_event{
 
 */
 
+typedef void (*timerCallback)(timer_event_t,void* context);
+
 struct timer_interface{
     int (*timerSetInterval)(struct timer_interface*,uint64_t interval);   
     int (*timerStart)(struct timer_interface*,timer_run_type_t type);   //Run once or periodic
     int (*timerStop)(struct timer_interface*);
     int (*timerRestart)(struct timer_interface*);
     uint64_t (*timerGetCurrentTime)();   // Static method, means class method and not instance method
-    int (*timerRegisterCallback)(struct timer_interface*,void(*callback)(timer_event_t));
+    int (*timerRegisterCallback)(struct timer_interface*,timerCallback cb);
+    int (*timerRegisterContext)(struct timer_interface*,void* context);
     int (*timerDestroy)(struct timer_interface*);
 };
 
