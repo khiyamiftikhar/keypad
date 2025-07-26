@@ -36,7 +36,8 @@ struct timer_interface{
     int (*timerRestart)(struct timer_interface*);
     uint64_t (*timerGetCurrentTime)();   // Static method, means class method and not instance method
     int (*timerRegisterCallback)(struct timer_interface*,timerCallback cb);
-    int (*timerRegisterContext)(struct timer_interface*,void* context);
+    int (*timerRegisterUserContext)(struct timer_interface*,void* user_context);
+    //int (*timerRegisterCreaContext)(struct timer_interface*,void* user_context);
     int (*timerDestroy)(struct timer_interface*);
 };
 

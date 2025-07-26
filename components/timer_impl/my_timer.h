@@ -11,8 +11,7 @@
 
 
 
-timer_interface_t* timerCreate(char* name, timerCallback cb);
-
+timer_interface_t* timerCreate(char* name,timerCallback cb,void* creator_context);
 
 
 #endif

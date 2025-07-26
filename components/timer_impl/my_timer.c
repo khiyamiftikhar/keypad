@@ -33,7 +33,8 @@ typedef struct my_timer{
     esp_timer_handle_t timer_handle;               //timer object of espidf, private data internally managed
     timerCallback callback;
     timer_interface_t interface;
-    void* context;      //For callback , so that user extracts the self of the struct for which this timer is a pointer member    
+    void* user_context;      //So that user can be identified, as which user's (button's) time is elapsed
+    void* creator_context;  //So that the creator can be identified. For example if used in the keypad code, then to which keypad it belogs to
 }my_timer_t;
 
 
@@ -169,14 +170,14 @@ static int timerRegisterCallback(timer_interface_t* self,timerCallback cb){
 
 }
 
-static int timerRegisterContext(timer_interface_t* self,void* context){
+static int timerRegisterContext(timer_interface_t* self,void* user_context){
 
     if(self==NULL)
         return -1;
 
     my_timer_t* my_timer=container_of(self,my_timer_t,interface);
 
-    my_timer->context=context;
+    my_timer->user_context=user_context;
 
     return 0;
 
@@ -223,9 +224,9 @@ static void poolReturn(){
 
 /// @brief Create a timer. Assign all the members their respective values
 /// @param self 
-/// @param context This timer returns timer_interface pointer which could be pointer member of a struct which can have multiple instance. So context to figure out which instance
+/// @param user_context This timer returns timer_interface pointer which could be pointer member of a struct which can have multiple instance. So user_context to figure out which instance
 /// @return 
-timer_interface_t* timerCreate(char* name,timerCallback cb){
+timer_interface_t* timerCreate(char* name,timerCallback cb,void* creator_context){
 
     char timer_name[10];
     my_timer_t* self=poolGet();
@@ -265,7 +266,7 @@ timer_interface_t* timerCreate(char* name,timerCallback cb){
 
     self->timer_handle=timer_handle;
     self->callback=cb;
-    //self->context=context;
+    self->creator_context=creator_context;
     //self->interface.timerGetCurrentTime=timerGetCurrentTime;
     self->interface.timerStart=timerStart;
     self->interface.timerStop=timerStop;
@@ -302,7 +303,7 @@ static void timer_callback(void* arg){
     event=TIMER_EVENT_ELAPSED;
 
     //Call the callback registered by the user
-    my_timer->callback(event,my_timer->context);
+    my_timer->callback(event,my_timer->creator_context);
     
 }
 
