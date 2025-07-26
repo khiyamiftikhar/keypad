@@ -27,7 +27,7 @@ typedef struct timer_event{
 
 */
 
-typedef void (*timerCallback)(timer_event_t,void* context);
+typedef void (*timerCallback)(timer_event_t,void* creator_context,void* user_context);
 
 struct timer_interface{
     int (*timerSetInterval)(struct timer_interface*,uint64_t interval);   

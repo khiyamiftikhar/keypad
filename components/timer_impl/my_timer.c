@@ -303,7 +303,7 @@ static void timer_callback(void* arg){
     event=TIMER_EVENT_ELAPSED;
 
     //Call the callback registered by the user
-    my_timer->callback(event,my_timer->creator_context);
+    my_timer->callback(event,my_timer->creator_context,my_timer->user_context);
     
 }
 
