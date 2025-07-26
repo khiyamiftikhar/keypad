@@ -44,6 +44,10 @@ typedef enum{
     TIMER_ELAPSE_EVENT
 }mp_event_t;
 
+typedef struct{
+    mp_event_t event;
+    void* context;          //Which button and which timer is causing this event
+}mp_event_data_t;
 
 //For The MP. Both the timer events and scan events will queue here
 typedef struct queue_mp_event_handle{
@@ -220,6 +224,7 @@ static void timerCallback(timer_event_t event,void* context){
     
     keypad_dev_t* self=(keypad_dev_t*) context;
 
+
     
 
 }
@@ -315,7 +320,7 @@ keypad_interface_t* keypadCreate(keypad_config_t* config){
     //This is already an instance member so argument is single pointer. No context is required for this since no callback
     ret=configKeypadOutput(&self->prober,self->row_gpios,self->total_rows);
     ESP_LOGI(TAG,"prober %d",ret);
-    self->mp_event_queue.handle=xQueueCreateStatic(MAX_INTERNAL_EVENT_QUEUE_ELEMENTS,sizeof(mp_event_t),self->mp_event_queue.buff,&self->mp_event_queue.queue_meta_data);
+    self->mp_event_queue.handle=xQueueCreateStatic(MAX_INTERNAL_EVENT_QUEUE_ELEMENTS,sizeof(mp_event_data_t),self->mp_event_queue.buff,&self->mp_event_queue.queue_meta_data);
 
     self->user_event_queue.handle=xQueueCreateStatic(MAX_USER_EVENT_QUEUE_ELEMENTS,sizeof(key_event_t),self->user_event_queue.buff,&self->user_event_queue.queue_meta_data);
 
