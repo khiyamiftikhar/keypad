@@ -38,12 +38,28 @@ static const char* TAG="keypad";
         (type *)( (char *)__mptr - offsetof(type,member) );})
 
 
-typedef struct queue_internal_event_handle{
+//Events for the MP queue
+typedef enum{
+    BUTTON_PRESS_EVENT=0,
+    TIMER_ELAPSE_EVENT
+}mp_event_t;
+
+
+//For The MP. Both the timer events and scan events will queue here
+typedef struct queue_mp_event_handle{
     QueueHandle_t handle;
     StaticQueue_t queue_meta_data;
-    uint8_t buff[sizeof(void*)*MAX_ELEMENTS];      //This must be equal to total void pointers, sizeof(void*)*total_elements
+    uint8_t buff[sizeof(void*)*INTERNAL_EVENT_QUEUE_ELEMENTS];      //This must be equal to total void pointers, sizeof(void*)*total_elements
     //size_t object_size;         //Not required as it is a void pointer
-}queue_internal_event_handle_t;
+}queue_mp_event_handle_t;
+
+
+typedef struct queue_user_event_handle{
+    QueueHandle_t handle;
+    StaticQueue_t queue_meta_data;
+    uint8_t buff[sizeof(void*)*USER_EVENT_QUEUE_ELEMENTS];      //This must be equal to total void pointers, sizeof(void*)*total_elements
+    //size_t object_size;         //Not required as it is a void pointer
+}queue_user_event_handle_t;
 
 
 

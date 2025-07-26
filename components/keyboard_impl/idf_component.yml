@@ -1,0 +1,9 @@
+dependencies:
+  pool_alloc_queue_impl:
+    path: "../../../pool-allocator/components/pool_alloc_queue_impl"
+  keypad-button:
+    path: "../../../keypad-button/components/keypad-button"
+  probe-manager:
+    path: "../../../pwm-line/components/probe-manager"
+  scan-manager:
+    path: "/vscodeespidf/projectworkspace/scan-line/components/scan-manager" #absolute path, '/' at start automaitcally gets translated to e:/

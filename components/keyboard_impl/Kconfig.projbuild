@@ -1,0 +1,41 @@
+menu "Keypad Config"
+
+    config MAX_KEYPADS
+        int "Max Keypad Objects"
+        default 3
+        range 1 5
+        help
+            Max Keypad Objects that cann be created
+
+
+    config KPAD_MAX_ROWS
+        int "MAX ROWS"
+        default 4
+        range 1 8
+        help
+            Specifies the total number of rows in keypad
+
+    config KPAD_MAX_COLS
+        int "MAX COLS"
+        default 4
+        range 1 8
+        help
+            Specifies the total number of cols in keypad
+    
+    config MAX_SIMULTANEOUS_KEYS
+        int "Max Simultaneous Keys"
+        default 4
+        range 1 6
+        help
+            Max key presses detectable at a time
+
+
+
+
+
+
+
+
+
+
+endmenu
