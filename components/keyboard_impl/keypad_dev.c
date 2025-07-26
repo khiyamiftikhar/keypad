@@ -20,9 +20,9 @@
 
 //These #defines are internal
 //This first queue is the one that gets both scanner and timer events and passes to the corresponding button
-#define INTERNAL_EVENT_QUEUE_ELEMENTS               100
+#define MAX_INTERNAL_EVENT_QUEUE_ELEMENTS               100
 //This queue gets the user evebts   
-#define USER_EVENT_QUEUE_ELEMENTS                   50
+#define MAX_USER_EVENT_QUEUE_ELEMENTS                   50
 
 //#define QUEUE_LENGTH                                100
 
@@ -49,7 +49,7 @@ typedef enum{
 typedef struct queue_mp_event_handle{
     QueueHandle_t handle;
     StaticQueue_t queue_meta_data;
-    uint8_t buff[sizeof(void*)*INTERNAL_EVENT_QUEUE_ELEMENTS];      //This must be equal to total void pointers, sizeof(void*)*total_elements
+    uint8_t buff[sizeof(mp_event_t)*MAX_INTERNAL_EVENT_QUEUE_ELEMENTS];      //This must be equal to total void pointers, sizeof(void*)*total_elements
     //size_t object_size;         //Not required as it is a void pointer
 }queue_mp_event_handle_t;
 
@@ -57,7 +57,7 @@ typedef struct queue_mp_event_handle{
 typedef struct queue_user_event_handle{
     QueueHandle_t handle;
     StaticQueue_t queue_meta_data;
-    uint8_t buff[sizeof(void*)*USER_EVENT_QUEUE_ELEMENTS];      //This must be equal to total void pointers, sizeof(void*)*total_elements
+    uint8_t buff[sizeof(void*)*MAX_USER_EVENT_QUEUE_ELEMENTS];      //This must be equal to total void pointers, sizeof(void*)*total_elements
     //size_t object_size;         //Not required as it is a void pointer
 }queue_user_event_handle_t;
 
@@ -78,6 +78,10 @@ typedef struct keypad_dev{
     timer_interface_t* timers[MAX_SIMULTANEOUS_KEYS];   //array of pointers
     pool_alloc_interface_t* timer_pool; //This is the object passsed to button objects
     button_interface_t* button[MAX_BUTTONS];
+    queue_mp_event_handle_t mp_event_queue;         //Multiple producer queue, scan and timer events
+    queue_user_event_handle_t user_event_queue;     //Major events intimated to user
+    TaskHandle_t mp_queue_task;
+    TaskHandle_t user_queue_task;
 }keypad_dev_t;
 
 
@@ -216,6 +220,7 @@ static void timerCallback(timer_event_t event,void* context){
     
     keypad_dev_t* self=(keypad_dev_t*) context;
 
+    
 
 }
 
@@ -224,12 +229,14 @@ static esp_err_t configKeypadTimers(keypad_dev_t* self,uint8_t total_timers){
     char name[10];
 
     timer_interface_t** timer_array=self->timers;
-    void* context = (void*)self;
+    //void* context = (void*)self;//Now context is added by the user
+    //                              and callback is addeed by keypad.
+                                //so that keypbad callback knows to whcih user this call of callback belongs
     //void* context=(void*)t;
     for(uint8_t i=0;i<total_timers;i++){
 
         sprintf(name,"timer %d",i);
-        timer_array[i]=timerCreate(name,timerCallback,context);
+        timer_array[i]=timerCreate(name,timerCallback);
         if(timer_array[i]==NULL)
             return ESP_FAIL;
 
@@ -308,8 +315,14 @@ keypad_interface_t* keypadCreate(keypad_config_t* config){
     //This is already an instance member so argument is single pointer. No context is required for this since no callback
     ret=configKeypadOutput(&self->prober,self->row_gpios,self->total_rows);
     ESP_LOGI(TAG,"prober %d",ret);
+    self->mp_event_queue.handle=xQueueCreateStatic(MAX_INTERNAL_EVENT_QUEUE_ELEMENTS,sizeof(mp_event_t),self->mp_event_queue.buff,&self->mp_event_queue.queue_meta_data);
 
+    self->user_event_queue.handle=xQueueCreateStatic(MAX_USER_EVENT_QUEUE_ELEMENTS,sizeof(key_event_t),self->user_event_queue.buff,&self->user_event_queue.queue_meta_data);
+
+    ESP_ERROR_CHECK(xTaskCreate(task_mp_queue,"MP Queue Task",configMINIMAL_STACK_SIZE,NULL,5,self->mp_queue_task));
+    ESP_ERROR_CHECK(xTaskCreate(task_user_queue,"User Queue Task",configMINIMAL_STACK_SIZE,NULL,5,self->user_queue_task));
     
+    return &self->interface;
         
 }
 
