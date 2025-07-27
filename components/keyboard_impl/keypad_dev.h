@@ -22,9 +22,9 @@ typedef enum
     }key_event_t;
 
 typedef struct{
+    key_event_t event;
     uint8_t key_id;
     uint32_t time_stamp;
-
 }keypad_event_data_t;
 
 
@@ -64,17 +64,5 @@ typedef struct{
 
 
 keypad_interface_t* keypadCreate(keypad_config_t* config);
-
-
-
-
-
-
-
-
-
-
-
-
 
 #endif

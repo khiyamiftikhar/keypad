@@ -40,14 +40,23 @@ static const char* TAG="keypad";
 
 //Events for the MP queue
 typedef enum{
-    BUTTON_PRESS_EVENT=0,
-    TIMER_ELAPSE_EVENT
+    MP_EVENT_BUTTON_PRESS=0,
+    MP_EVENT_TIMER_ELAPSED
 }mp_event_t;
+
+
 
 typedef struct{
     mp_event_t event;
-    void* context;          //Which button and which timer is causing this event
+    button_interface_t* button;          //Which button and which timer is causing this event
 }mp_event_data_t;
+
+
+/*typedef struct{
+    key_event_t event;
+    uint8_t button_id;           //Which button and which timer is causing this event
+    uint32_t time_stamp;
+}key_event_data_t;*/
 
 //For The MP. Both the timer events and scan events will queue here
 typedef struct queue_mp_event_handle{
@@ -86,6 +95,7 @@ typedef struct keypad_dev{
     queue_user_event_handle_t user_event_queue;     //Major events intimated to user
     TaskHandle_t mp_queue_task;
     TaskHandle_t user_queue_task;
+    keypadCallback cb;
 }keypad_dev_t;
 
 
@@ -150,23 +160,118 @@ static void copyUserParameters(keypad_dev_t* self,keypad_config_t* config){
     memcpy(self->row_gpios,config->row_gpios,sizeof(uint8_t)*config->total_rows);
     self->total_rows=config->total_rows;
     memcpy(self->keymap,config->keymap,sizeof(config->keymap));
+    self->cb=config->cb;
 
 
 }
 
-static void callbackForScanner(scanner_event_data_t* event_data,void* context){
+static void scannerEventHandler(scanner_event_data_t* event_data,void* context){
 
     //Get the keypad_dev_t instance
     keypad_dev_t* self=(keypad_dev_t*)context;
+
+    
+
+    uint8_t row=event_data->source_number;
+    uint8_t col=event_data->line_number;
+    uint8_t button_index=((row<<1)+col);
+    button_interface_t* button=self->button[button_index];
+
+    mp_event_data_t mp_event_data;
+    mp_event_data.event=MP_EVENT_BUTTON_PRESS;
+    mp_event_data.button=button;
+    xQueueSend(self->mp_event_queue.handle,&mp_event_data,portMAX_DELAY);
+
     
 
 }
+
+
+static void timerEventHandler(timer_event_t event,void* creator_context,void* user_context){
+    
+    //keypad_button_t* self=(keypad_dev_t*) context;
+
+    keypad_dev_t* keypad=(keypad_dev_t*) creator_context;
+    mp_event_data_t event_data;
+    button_interface_t* button=(button_interface_t*)user_context;
+    event_data.button=button;
+    event_data.event=MP_EVENT_TIMER_ELAPSED;         //Although different enum types , but ennum value is same i.e 1 for timer elapse
+
+    QueueHandle_t queue=keypad->mp_event_queue.handle;
+
+    //Push the timer elapsed event with the context of the user (button) for which the timer elapsed.
+    xQueueSend(queue,&event_data,portMAX_DELAY);
+
+}
+
+
+
+
+static void task_mp_queue(void* args){
+
+    button_interface_t* button;
+    keypad_dev_t* self=(keypad_dev_t*)args;
+    QueueHandle_t queue_handle=(QueueHandle_t) self->mp_event_queue.handle;
+    mp_event_data_t mp_event_data={0};
+
+    while(1){
+        if(xQueueReceive(queue_handle,&mp_event_data,portMAX_DELAY)==pdTRUE){
+
+            button=mp_event_data.button;
+            switch(mp_event_data.event){
+                case MP_EVENT_BUTTON_PRESS:    button->buttonEventInform(&button,BUTTON_EVENT_PRESSED); break;
+                
+                case MP_EVENT_TIMER_ELAPSED:    button->buttonEventInform(&button,BUTTON_TIMER_ELAPSED); break;
+
+                //This is not useful or well though out. just written for the sake of writing a default statement
+                default:    button->buttonEventInform(&button,BUTTON_TIMER_ELAPSED); break;
+
+            }
+            
+        }
+
+    }
+
+}
+
+static void task_user_queue(void* args){
+    keypad_dev_t* self=(keypad_dev_t*)args;
+    QueueHandle_t queue_handle=(QueueHandle_t) self->mp_event_queue.handle;
+    key_event_data_t key_event_data={0};
+
+
+    while(1){
+
+
+        if(xQueueReceive(queue_handle,&key_event_data,portMAX_DELAY)==pdTRUE){
+            self->cb(key_event_data.event,&key_event_data);
+            
+        }
+
+
+    }
+
+
+
+}
+
 
 
 static void buttonHandler(uint8_t button_id,button_event_data_t* evt,void* context){
 
     keypad_dev_t* self=(keypad_dev_t*) context;
 
+    QueueHandle_t queue=self->user_event_queue.handle;
+
+    keypad_event_data_t keypad_event_data={0};
+
+    
+    keypad_event_data.event=evt->event;
+    keypad_event_data.key_id==evt->event;    
+    keypad_event_data.time_stamp=evt->timestamp;
+
+    xQueueSend(queue,&keypad_event_data,portMAX_DELAY);
+    
 }
 
 static esp_err_t configKeypadButtons(keypad_dev_t* self,uint8_t total_buttons){
@@ -220,15 +325,6 @@ static esp_err_t configKeypadOutput(prober_t* self,uint8_t* output_gpio,uint8_t 
 
 }
 
-static void timerCallback(timer_event_t event,void* context){
-    
-    keypad_dev_t* self=(keypad_dev_t*) context;
-
-
-    
-
-}
-
 static esp_err_t configKeypadTimers(keypad_dev_t* self,uint8_t total_timers){
 
     char name[10];
@@ -241,7 +337,7 @@ static esp_err_t configKeypadTimers(keypad_dev_t* self,uint8_t total_timers){
     for(uint8_t i=0;i<total_timers;i++){
 
         sprintf(name,"timer %d",i);
-        timer_array[i]=timerCreate(name,timerCallback);
+        timer_array[i]=timerCreate(name,timerEventHandler,self);
         if(timer_array[i]==NULL)
             return ESP_FAIL;
 
@@ -290,7 +386,7 @@ static esp_err_t configKeypadInput(keypad_dev_t* self,uint8_t* input_gpio,uint8_
     config.min_width=1500;      //1500 milliseconds. Pulse smaller than that will not be analyzed
     config.pwm_widths_array=pulse_widths;
     config.context=(void*)self; //This will later reterive the keypad_dev_t instance
-    config.cb=callbackForScanner;
+    config.cb=scannerEventHandler;
     
     //Assigning the scanner member of the self
     scn=scannerCreate(&config);
@@ -313,6 +409,8 @@ keypad_interface_t* keypadCreate(keypad_config_t* config){
     int ret;
     if(self==NULL || config==NULL)
         return NULL;
+    
+    
     copyUserParameters(self,config);
     //Here we are sending address bcz argument is double pointer and it is required to have the address of this pointer member inside the struct
     ret=configKeypadInput(self,self->col_gpio,self->total_cols,self->total_rows);
@@ -320,12 +418,17 @@ keypad_interface_t* keypadCreate(keypad_config_t* config){
     //This is already an instance member so argument is single pointer. No context is required for this since no callback
     ret=configKeypadOutput(&self->prober,self->row_gpios,self->total_rows);
     ESP_LOGI(TAG,"prober %d",ret);
+
+    configKeypadTimers(self,MAX_SIMULTANEOUS_KEYS);
+    configTimerPool(self->timer_pool,self->timers,MAX_SIMULTANEOUS_KEYS);
+    configKeypadButtons(self,MAX_BUTTONS);
+
     self->mp_event_queue.handle=xQueueCreateStatic(MAX_INTERNAL_EVENT_QUEUE_ELEMENTS,sizeof(mp_event_data_t),self->mp_event_queue.buff,&self->mp_event_queue.queue_meta_data);
 
     self->user_event_queue.handle=xQueueCreateStatic(MAX_USER_EVENT_QUEUE_ELEMENTS,sizeof(key_event_t),self->user_event_queue.buff,&self->user_event_queue.queue_meta_data);
 
-    ESP_ERROR_CHECK(xTaskCreate(task_mp_queue,"MP Queue Task",configMINIMAL_STACK_SIZE,NULL,5,self->mp_queue_task));
-    ESP_ERROR_CHECK(xTaskCreate(task_user_queue,"User Queue Task",configMINIMAL_STACK_SIZE,NULL,5,self->user_queue_task));
+    ESP_ERROR_CHECK(xTaskCreate(task_mp_queue,"MP Queue Task",configMINIMAL_STACK_SIZE,(void*)self,5,self->mp_queue_task));
+    ESP_ERROR_CHECK(xTaskCreate(task_user_queue,"User Queue Task",configMINIMAL_STACK_SIZE,(void*)self,5,self->user_queue_task));
     
     return &self->interface;
         
