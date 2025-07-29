@@ -94,7 +94,7 @@ static int timerStart(timer_interface_t* self,timer_run_type_t run_type){
  
         return -1;
 
-    ESP_LOGI(TAG," interval is %llu",my_timer->interval);
+    ESP_LOGI(TAG," interval is %"PRIu64,my_timer->interval);
     esp_err_t err;
     my_timer->type=run_type;
     if(run_type==TIMER_PERIODIC)
@@ -275,7 +275,7 @@ timer_interface_t* timerCreate(char* name,timerCallback cb,void* creator_context
     self->interface.timerRegisterCallback=timerRegisterCallback;
     self->interface.timerGetCurrentTime=timerGetCurrentTime;
     self->interface.timerDestroy=timerDestroy;
-    
+    self->interface.timerRegisterUserContext=timerRegisterContext;    
     /* Clean up and finish the example 
     ESP_ERROR_CHECK(esp_timer_stop(periodic_timer));
     ESP_ERROR_CHECK(esp_timer_delete(periodic_timer));
