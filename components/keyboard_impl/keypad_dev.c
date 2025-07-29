@@ -224,18 +224,18 @@ static void task_mp_queue(void* args){
     while(1){
         if(xQueueReceive(queue_handle,&mp_event_data,portMAX_DELAY)==pdTRUE){
 
-            ESP_LOGI(TAG,"problem here %d",mp_event_data.event);
+            //ESP_LOGI(TAG,"problem here %d",mp_event_data.event);
             button=mp_event_data.button;
             if(button==NULL || button->buttonEventInform==NULL)
                 continue;
-            ESP_LOGI(TAG,"not so %d",mp_event_data.event);
+            //ESP_LOGI(TAG,"not so %d",mp_event_data.event);
             switch(mp_event_data.event){
                 case MP_EVENT_BUTTON_PRESS:    button->buttonEventInform(button,BUTTON_STATE_EVENT_PRESSED); break;
                 
                 case MP_EVENT_TIMER_ELAPSED:    button->buttonEventInform(button,BUTTON_STATE_EVENT_TIMER_ELAPSED); break;
 
                 //This is not useful or well though out. just written for the sake of writing a default statement
-                default:    button->buttonEventInform(button,BUTTON_STATE_EVENT_TIMER_ELAPSED); break;
+                default:    button->buttonEventInform(button,2); break;
 
             }
             
@@ -255,6 +255,7 @@ static void task_user_queue(void* args){
 
 
         if(xQueueReceive(queue_handle,&key_event_data,portMAX_DELAY)==pdTRUE){
+            ESP_LOGI(TAG,"sending key id %d",key_event_data.key_id);
             self->cb(key_event_data.event,&key_event_data);
             
         }
@@ -268,7 +269,7 @@ static void task_user_queue(void* args){
 
 
 
-static void buttonHandler(uint8_t button_id,button_event_data_t* evt,void* context){
+static void buttonHandler(uint8_t button_index,button_event_data_t* evt,void* context){
 
     keypad_dev_t* self=(keypad_dev_t*) context;
 
@@ -276,7 +277,7 @@ static void buttonHandler(uint8_t button_id,button_event_data_t* evt,void* conte
 
     keypad_event_data_t keypad_event_data={0};
 
-    
+    ESP_LOGI(TAG,"id %d, val %d",button_index,evt->button_id);
     keypad_event_data.event=evt->event;
     keypad_event_data.key_id=evt->button_id;    
     keypad_event_data.time_stamp=evt->timestamp;
@@ -288,18 +289,30 @@ static void buttonHandler(uint8_t button_id,button_event_data_t* evt,void* conte
 static esp_err_t configKeypadButtons(keypad_dev_t* self,uint8_t total_buttons){
 
     button_config_t config={0};
-    config.scan_time_period=self->prober.time_period;
+    config.scan_time_period=self->prober.time_period + 6000;
     ESP_LOGI(TAG,"timer period %"PRIu32,self->prober.time_period);
     config.cb=buttonHandler;
     config.context=(void*)self;
     config.timer_pool=self->timer_pool;
     
     
+    uint8_t keymap_row_index=0;
+    uint8_t keymap_col_index=0;
+    uint8_t total_rows=self->total_rows;
+    uint8_t total_cols=self->total_cols;
     for(uint8_t i=0;i<total_buttons;i++){
-        config.button_index=i;    
+        
+        config.button_index=i;  
+        config.button_id=self->keymap[keymap_row_index][keymap_col_index];
         self->button[i]=keypadButtonCreate(&config);
         if(self->button[i]==NULL)
             return ESP_FAIL;
+        keymap_col_index++;
+        if(keymap_col_index==total_cols){
+            keymap_col_index=0;
+            keymap_row_index++;
+        }
+
     }
 
 
@@ -441,7 +454,7 @@ keypad_interface_t* keypadCreate(keypad_config_t* config){
 
     self->mp_event_queue.handle=xQueueCreateStatic(MAX_INTERNAL_EVENT_QUEUE_ELEMENTS,sizeof(mp_event_data_t),self->mp_event_queue.buff,&self->mp_event_queue.queue_meta_data);
 
-    self->user_event_queue.handle=xQueueCreateStatic(MAX_USER_EVENT_QUEUE_ELEMENTS,sizeof(key_event_t),self->user_event_queue.buff,&self->user_event_queue.queue_meta_data);
+    self->user_event_queue.handle=xQueueCreateStatic(MAX_USER_EVENT_QUEUE_ELEMENTS,sizeof(keypad_event_data_t),self->user_event_queue.buff,&self->user_event_queue.queue_meta_data);
 
     ESP_LOGI(TAG, "Free heap before: %" PRIu32, esp_get_free_heap_size());
     xTaskCreate(task_mp_queue,"MP Queue Task",8192,(void*)self,5,&self->mp_queue_task);
