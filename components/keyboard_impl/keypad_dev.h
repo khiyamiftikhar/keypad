@@ -15,10 +15,10 @@ typedef enum
     }key_press_mode_t;
 
 typedef enum 
-    {PRESS,
-    RELEASE,
-    LONG_PRESS,
-    REPEAT
+    {KEY_PRESSED,
+    KEY_RELEASED,
+    KEY_LONG_PRESSED,
+    KEY_REPEATED,
     }key_event_t;
 
 typedef struct{
