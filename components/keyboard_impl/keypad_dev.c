@@ -1,5 +1,7 @@
 
 #include <stdint.h>
+#include <string.h>
+
 #include <esp_log.h>
 
 
@@ -62,7 +64,7 @@ typedef struct{
 typedef struct queue_mp_event_handle{
     QueueHandle_t handle;
     StaticQueue_t queue_meta_data;
-    uint8_t buff[sizeof(mp_event_t)*MAX_INTERNAL_EVENT_QUEUE_ELEMENTS];      //This must be equal to total void pointers, sizeof(void*)*total_elements
+    uint8_t buff[sizeof(mp_event_data_t)*MAX_INTERNAL_EVENT_QUEUE_ELEMENTS];      //This must be equal to total void pointers, sizeof(void*)*total_elements
     //size_t object_size;         //Not required as it is a void pointer
 }queue_mp_event_handle_t;
 
@@ -70,7 +72,7 @@ typedef struct queue_mp_event_handle{
 typedef struct queue_user_event_handle{
     QueueHandle_t handle;
     StaticQueue_t queue_meta_data;
-    uint8_t buff[sizeof(void*)*MAX_USER_EVENT_QUEUE_ELEMENTS];      //This must be equal to total void pointers, sizeof(void*)*total_elements
+    uint8_t buff[sizeof(keypad_event_data_t)*MAX_USER_EVENT_QUEUE_ELEMENTS];      //This must be equal to total void pointers, sizeof(void*)*total_elements
     //size_t object_size;         //Not required as it is a void pointer
 }queue_user_event_handle_t;
 
@@ -170,17 +172,22 @@ static void scannerEventHandler(scanner_event_data_t* event_data,void* context){
     //Get the keypad_dev_t instance
     keypad_dev_t* self=(keypad_dev_t*)context;
 
-    
+    if(self->mp_event_queue.handle==NULL)
+        return;
 
     uint8_t row=event_data->source_number;
     uint8_t col=event_data->line_number;
-    uint8_t button_index=((row<<1)+col);
+    uint8_t total_cols=self->total_cols;
+    uint8_t button_index=((row*total_cols)+col);
+    ESP_LOGI(TAG,"row %d, col %d, button index %d",row,col,button_index);
     button_interface_t* button=self->button[button_index];
 
     mp_event_data_t mp_event_data;
     mp_event_data.event=MP_EVENT_BUTTON_PRESS;
     mp_event_data.button=button;
+    //ESP_LOGI(TAG,"before mp  sending");
     xQueueSend(self->mp_event_queue.handle,&mp_event_data,portMAX_DELAY);
+    //ESP_LOGI(TAG,"after mp  sending");
 
     
 
@@ -198,7 +205,7 @@ static void timerEventHandler(timer_event_t event,void* creator_context,void* us
     event_data.event=MP_EVENT_TIMER_ELAPSED;         //Although different enum types , but ennum value is same i.e 1 for timer elapse
 
     QueueHandle_t queue=keypad->mp_event_queue.handle;
-
+    //ESP_LOGI(TAG,"timer over");
     //Push the timer elapsed event with the context of the user (button) for which the timer elapsed.
     xQueueSend(queue,&event_data,portMAX_DELAY);
 
@@ -213,18 +220,22 @@ static void task_mp_queue(void* args){
     keypad_dev_t* self=(keypad_dev_t*)args;
     QueueHandle_t queue_handle=(QueueHandle_t) self->mp_event_queue.handle;
     mp_event_data_t mp_event_data={0};
-
+    
     while(1){
         if(xQueueReceive(queue_handle,&mp_event_data,portMAX_DELAY)==pdTRUE){
 
+            //ESP_LOGI(TAG,"problem here");
             button=mp_event_data.button;
+            if(button==NULL || button->buttonEventInform==NULL)
+                continue;
+            //ESP_LOGI(TAG,"not so");
             switch(mp_event_data.event){
-                case MP_EVENT_BUTTON_PRESS:    button->buttonEventInform(&button,BUTTON_EVENT_PRESSED); break;
+                case MP_EVENT_BUTTON_PRESS:    button->buttonEventInform(button,BUTTON_STATE_EVENT_PRESSED); break;
                 
-                case MP_EVENT_TIMER_ELAPSED:    button->buttonEventInform(&button,BUTTON_TIMER_ELAPSED); break;
+                case MP_EVENT_TIMER_ELAPSED:    button->buttonEventInform(button,BUTTON_STATE_EVENT_TIMER_ELAPSED); break;
 
                 //This is not useful or well though out. just written for the sake of writing a default statement
-                default:    button->buttonEventInform(&button,BUTTON_TIMER_ELAPSED); break;
+                default:    button->buttonEventInform(button,BUTTON_STATE_EVENT_TIMER_ELAPSED); break;
 
             }
             
@@ -237,7 +248,7 @@ static void task_mp_queue(void* args){
 static void task_user_queue(void* args){
     keypad_dev_t* self=(keypad_dev_t*)args;
     QueueHandle_t queue_handle=(QueueHandle_t) self->mp_event_queue.handle;
-    key_event_data_t key_event_data={0};
+    keypad_event_data_t key_event_data={0};
 
 
     while(1){
@@ -267,7 +278,7 @@ static void buttonHandler(uint8_t button_id,button_event_data_t* evt,void* conte
 
     
     keypad_event_data.event=evt->event;
-    keypad_event_data.key_id==evt->event;    
+    keypad_event_data.key_id=evt->button_id;    
     keypad_event_data.time_stamp=evt->timestamp;
 
     xQueueSend(queue,&keypad_event_data,portMAX_DELAY);
@@ -286,7 +297,7 @@ static esp_err_t configKeypadButtons(keypad_dev_t* self,uint8_t total_buttons){
     for(uint8_t i=0;i<total_buttons;i++){
         config.button_index=i;    
         self->button[i]=keypadButtonCreate(&config);
-        if(self->button==NULL)
+        if(self->button[i]==NULL)
             return ESP_FAIL;
     }
 
@@ -304,7 +315,7 @@ static esp_err_t configKeypadButtons(keypad_dev_t* self,uint8_t total_buttons){
 
 
 //This same array is used both by prober and scanner
-static uint32_t pulse_widths={2000,2400,2800,3200};        //Microseconds
+static uint32_t pulse_widths[]={2000,2400,2800,3200};        //Microseconds
 
 static prober_t keypad_prober;
 static esp_err_t configKeypadOutput(prober_t* self,uint8_t* output_gpio,uint8_t total_outputs){
@@ -319,7 +330,7 @@ static esp_err_t configKeypadOutput(prober_t* self,uint8_t* output_gpio,uint8_t 
     config.time_period=14500;   //(2000+1000)+(2400+1000)+(2800+1000)+(3200+1000
 
     //initalizing the prober member of self. It needs to be changed to have internal static allocation inside scanner
-    int ret=proberCreate(&self,&config);
+    int ret=proberCreate(self,&config);
 
     return ret;
 
@@ -346,12 +357,12 @@ static esp_err_t configKeypadTimers(keypad_dev_t* self,uint8_t total_timers){
     return ESP_OK;
 }
 
-static esp_err_t configTimerPool(pool_alloc_interface_t* pool,timer_interface_t** timers,uint8_t total_objects){
+static esp_err_t configTimerPool(keypad_dev_t* self,timer_interface_t** timers,uint8_t total_objects){
 
     //This call does not require any paramaters bcz Max objects that a pool can manage is the only requirement
     //which is set through Kconfig
-    pool=poolQueueCreate();
-    if(pool==NULL)
+    self->timer_pool=poolQueueCreate();
+    if(self->timer_pool==NULL)
         return ESP_FAIL;
 
     //Now fill the pool
@@ -360,7 +371,7 @@ static esp_err_t configTimerPool(pool_alloc_interface_t* pool,timer_interface_t*
         if(timers[i]==NULL)
             return ESP_FAIL;
         else
-            pool->poolFill(pool,(void*)timers[i]);
+            self->timer_pool->poolFill(self->timer_pool,(void*)timers[i]);
 
     }
 
@@ -379,6 +390,7 @@ static esp_err_t configKeypadInput(keypad_dev_t* self,uint8_t* input_gpio,uint8_
     scanner_config_t config={0};
     scanner_interface_t * scn=self->scanner;
 
+
     config.gpio_no=input_gpio;
     config.total_gpio=total_inputs;
     config.total_signals=total_outputs;
@@ -389,9 +401,9 @@ static esp_err_t configKeypadInput(keypad_dev_t* self,uint8_t* input_gpio,uint8_
     config.cb=scannerEventHandler;
     
     //Assigning the scanner member of the self
-    scn=scannerCreate(&config);
+    self->scanner=scannerCreate(&config);
 
-    if(scn==NULL)
+    if(self->scanner==NULL)
         return ESP_FAIL;
 
     return ESP_OK;
@@ -419,17 +431,24 @@ keypad_interface_t* keypadCreate(keypad_config_t* config){
     ret=configKeypadOutput(&self->prober,self->row_gpios,self->total_rows);
     ESP_LOGI(TAG,"prober %d",ret);
 
-    configKeypadTimers(self,MAX_SIMULTANEOUS_KEYS);
-    configTimerPool(self->timer_pool,self->timers,MAX_SIMULTANEOUS_KEYS);
-    configKeypadButtons(self,MAX_BUTTONS);
+    ret=configKeypadTimers(self,MAX_SIMULTANEOUS_KEYS);
+    ESP_LOGI(TAG,"timer %d",ret);
+    ret=configTimerPool(self,self->timers,MAX_SIMULTANEOUS_KEYS);
+    ESP_LOGI(TAG,"timer pool %d",ret);
+    ret=configKeypadButtons(self,MAX_BUTTONS);
+    ESP_LOGI(TAG,"button %d",ret);
 
     self->mp_event_queue.handle=xQueueCreateStatic(MAX_INTERNAL_EVENT_QUEUE_ELEMENTS,sizeof(mp_event_data_t),self->mp_event_queue.buff,&self->mp_event_queue.queue_meta_data);
 
     self->user_event_queue.handle=xQueueCreateStatic(MAX_USER_EVENT_QUEUE_ELEMENTS,sizeof(key_event_t),self->user_event_queue.buff,&self->user_event_queue.queue_meta_data);
 
-    ESP_ERROR_CHECK(xTaskCreate(task_mp_queue,"MP Queue Task",configMINIMAL_STACK_SIZE,(void*)self,5,self->mp_queue_task));
-    ESP_ERROR_CHECK(xTaskCreate(task_user_queue,"User Queue Task",configMINIMAL_STACK_SIZE,(void*)self,5,self->user_queue_task));
-    
+    ESP_LOGI(TAG, "Free heap before: %" PRIu32, esp_get_free_heap_size());
+    xTaskCreate(task_mp_queue,"MP Queue Task",8192,(void*)self,5,&self->mp_queue_task);
+    xTaskCreate(task_user_queue,"User Queue Task",4096,(void*)self,5,&self->user_queue_task);
+    //Start scannning
+    self->scanner->startScanning(self->scanner);
+    //start probing
+    self->prober.interface.start(&self->prober.interface);
     return &self->interface;
         
 }
