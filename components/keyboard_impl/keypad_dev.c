@@ -197,7 +197,7 @@ static void scannerEventHandler(scanner_event_data_t* event_data,void* context){
 static void timerEventHandler(timer_event_t event,void* creator_context,void* user_context){
     
     //keypad_button_t* self=(keypad_dev_t*) context;
-
+    ESP_LOGI(TAG,"t hand");
     keypad_dev_t* keypad=(keypad_dev_t*) creator_context;
     mp_event_data_t event_data;
     button_interface_t* button=(button_interface_t*)user_context;
@@ -224,11 +224,11 @@ static void task_mp_queue(void* args){
     while(1){
         if(xQueueReceive(queue_handle,&mp_event_data,portMAX_DELAY)==pdTRUE){
 
-            //ESP_LOGI(TAG,"problem here");
+            ESP_LOGI(TAG,"problem here %d",mp_event_data.event);
             button=mp_event_data.button;
             if(button==NULL || button->buttonEventInform==NULL)
                 continue;
-            //ESP_LOGI(TAG,"not so");
+            ESP_LOGI(TAG,"not so %d",mp_event_data.event);
             switch(mp_event_data.event){
                 case MP_EVENT_BUTTON_PRESS:    button->buttonEventInform(button,BUTTON_STATE_EVENT_PRESSED); break;
                 
@@ -289,6 +289,7 @@ static esp_err_t configKeypadButtons(keypad_dev_t* self,uint8_t total_buttons){
 
     button_config_t config={0};
     config.scan_time_period=self->prober.time_period;
+    ESP_LOGI(TAG,"timer period %"PRIu32,self->prober.time_period);
     config.cb=buttonHandler;
     config.context=(void*)self;
     config.timer_pool=self->timer_pool;
