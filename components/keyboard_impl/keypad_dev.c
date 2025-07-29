@@ -247,7 +247,7 @@ static void task_mp_queue(void* args){
 
 static void task_user_queue(void* args){
     keypad_dev_t* self=(keypad_dev_t*)args;
-    QueueHandle_t queue_handle=(QueueHandle_t) self->mp_event_queue.handle;
+    QueueHandle_t queue_handle=(QueueHandle_t) self->user_event_queue.handle;
     keypad_event_data_t key_event_data={0};
 
 
