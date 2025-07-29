@@ -94,7 +94,7 @@ static int timerStart(timer_interface_t* self,timer_run_type_t run_type){
  
         return -1;
 
-    ESP_LOGI(TAG," interval is %"PRIu64,my_timer->interval);
+    //ESP_LOGI(TAG," interval is %"PRIu64,my_timer->interval);
     esp_err_t err;
     my_timer->type=run_type;
     if(run_type==TIMER_PERIODIC)
@@ -135,7 +135,7 @@ static int timerRestart(timer_interface_t* self){
          return -1;
     timer_run_type_t run_type=my_timer->type;
 
-    ESP_LOGI(TAG," interval is %llu",my_timer->interval);
+    //ESP_LOGI(TAG," interval is %llu",my_timer->interval);
     esp_err_t err;
 
     esp_timer_stop(my_timer->timer_handle);
@@ -294,7 +294,7 @@ timer_interface_t* timerCreate(char* name,timerCallback cb,void* creator_context
 static void timer_callback(void* arg){
     
 
-    ESP_LOGI(TAG,"internal callback");
+    //ESP_LOGI(TAG,"internal callback");
 
     my_timer_t* my_timer=(my_timer_t*)arg;
     timer_event_t event;
