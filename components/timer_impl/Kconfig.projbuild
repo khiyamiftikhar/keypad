@@ -1,0 +1,11 @@
+menu "Timer Component"
+
+    config MAX_OBJECTS
+        int "Maximum number of timer objects"
+        default 5
+        range 1 20
+        help
+            Defines the maximum number of timer objects that can be created.
+            Increase this value if you need more timers, but it will consume
+            more memory.
+endmenu
