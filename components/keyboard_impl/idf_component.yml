@@ -1,9 +1,21 @@
 dependencies:
   pool_alloc_queue_impl:
-    path: "../../../pool-allocator/components/pool_alloc_queue_impl"
+    git: https://github.com/khiyamiftikhar/pool-allocator.git
+    path: "components/pool_alloc_queue_impl"
   keypad-button:
-    path: "../../../keypad-button/components/keypad-button"
+    git: https://github.com/khiyamiftikhar/keypad-button.git
+    path: "components/keypad-button"
   probe-manager:
-    path: "../../../pwm-line/components/probe-manager"
+    git: https://github.com/khiyamiftikhar/pwm-line.git
+    path: "components/probe-manager"
   scan-manager:
-    path: "/vscodeespidf/projectworkspace/scan-line/components/scan-manager" #absolute path, '/' at start automaitcally gets translated to e:/
+    git: https://github.com/khiyamiftikhar/scan-line.git
+    path: "components/scan-manager"
+  timer_impl:
+    git: https://github.com/khiyamiftikhar/timer.git
+    path: "timer_impl"
+  pool_alloc_queue_impl:
+    git: https://github.com/khiyamiftikhar/pool-allocator.git
+    path: "components/pool_alloc_queue_impl"
+
+  
