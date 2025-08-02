@@ -1,21 +1,23 @@
 About
 
-This is an interrupt based keypad library designed for ESPIDF. It is designed and implemented using Object Oriented Design
-concepts and program to interface concept.
-The interface implementation will be injected to the component that requires it to have dependency inversion
-using dependency injection.
-The timer component is complete and tested.
-The gpio component is under development.
-Once GPIO component is complete, then the keypad interface will be implemented
+This is an interrupt based keypad library designed for ESPIDF. 
+It can detect 'n' number of keys simulataneously where 'n' is set statically through Kconfig.
+The detected buttons could be anywhere, whether same coulmn or row
 
-Folder Structure
 
-    components
+Usage
+      The main folder contains the usage example in keypad_test.c
+        Callback working and keypad interface member not yet implemented
 
-        The components folder contains different components. The interface folders only contain header file 
-        of the interface which is implemented by the implementation folders (Actual components)
+Working
+    The callback provides the following event data
+    even_type:
+            0: Pressed
+            1: Released    
+            2: Long Pressed
+            3: Repeat Press   //If kept pressed after 'Long Press Duration', this event will keep coming after every 'Repeat Press Duration'.
 
-    test
-        The 'test' folder at the root folder is the test project that uses "unity test framework"
-        Each component folder (timer component right now) also contains a test folder which contains
-        uniot tests
+    key_val:
+            The value assigned to the key using thee 'keymap' member of the config
+             
+    
