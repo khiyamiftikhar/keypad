@@ -21,3 +21,6 @@ Working
             The value assigned to the key using thee 'keymap' member of the config
              
     
+Hardware Connection:
+
+Must connect schottkey diodes at the Row GOING pins
