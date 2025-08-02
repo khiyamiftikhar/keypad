@@ -1,1 +1,0 @@
-Implementation of the timer interface
