@@ -4,10 +4,10 @@
 #include "my_timer.h"
 
 
-void callback(timer_event_t* event){
+void callback(timer_event_t event){
 
 
-    printf("\n event occured %d", event->event_type);
+    printf("\n event occured %d", event);
 }
 
 void app_main(void)
