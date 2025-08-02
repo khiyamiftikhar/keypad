@@ -23,4 +23,4 @@ Working
     
 Hardware Connection:
 
-Must connect schottkey diodes at the Row GOING pins
+Must connect schottkey diodes at the Row GPIO pins
