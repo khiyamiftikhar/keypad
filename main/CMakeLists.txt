@@ -1,3 +1,3 @@
-idf_component_register(SRCS "keypad.c"
+idf_component_register(SRCS "keypad_test.c"
                     INCLUDE_DIRS "."
-                    PRIV_REQUIRES timer_impl)
+                    PRIV_REQUIRES keyboard_impl)
