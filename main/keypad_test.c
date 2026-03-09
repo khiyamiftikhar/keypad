@@ -23,9 +23,13 @@ void app_main(){
     // Keep your app logs visible
     //esp_log_level_set("ketboard_impl", ESP_LOG_NONE);
 
+    //Create an array of Column GPIOs
     uint8_t col_gpios[]={12,13,14,15};
+    //Create an array of row GPIOs
     uint8_t row_gpios[]={18,19,22,23};
-    keypad_config_t config={    .cb=keyPadHandler,
+
+    //Create and fill config struct
+    keypad_config_t config={    .cb=keyPadHandler,      //Assign Callback
                                 .col_gpios=col_gpios,
                                 .row_gpios=row_gpios,
                                 .total_cols=4,
@@ -34,8 +38,8 @@ void app_main(){
                             };
 
         
-
+    //Instantiate a keypad Object
     keypad_interface_t* keypad = keypadCreate(&config);
-
+   
     
 }
