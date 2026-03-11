@@ -1,6 +1,6 @@
 # Ignore the entire build folder
 build/
-
+dependencies.lock
 # Ignore the .vscode folder
 .vscode/
 
@@ -13,3 +13,4 @@ components/timer_interface
 components
 sdkconfig
 sdkconfig.old
+managed_components/
