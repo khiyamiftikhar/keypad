@@ -10,3 +10,6 @@ test/build
 #these are now accessed from remote repo
 components/timer_impl
 components/timer_interface
+components
+sdkconfig
+sdkconfig.old
