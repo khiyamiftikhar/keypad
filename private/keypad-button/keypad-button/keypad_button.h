@@ -9,6 +9,10 @@
 //#define         ERR_BUTTON_INVALID_MEM          ( ERR_BUTTON_BASE-1 )
 
 
+#define CONFIG_TOTAL_BUTTON_OBJECTS     16
+    
+
+
 //Events of the GPIO related to the button. incoming events
 typedef enum{
             BUTTON_STATE_EVENT_PRESSED=0,
