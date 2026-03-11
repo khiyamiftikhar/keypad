@@ -1,0 +1,22 @@
+menu "Object Pool"
+    
+    config MAX_ELEMENTS
+        int "Total objects in a pool"
+        default 4
+        range 16 32
+        help
+            Total number of objects in the pool
+
+    config MAX_WAIT_TIME
+        int "Wait time (ms)"
+        default 3
+        help
+            Wait time for the reading and writing to the pool
+
+    config MAX_POOLS
+        int "Max Pools"
+        default 2
+        help
+            Total pool queues  that can be created
+    
+endmenu

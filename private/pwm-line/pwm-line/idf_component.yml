@@ -1,0 +1,4 @@
+dependencies:
+  pwm_line_interface:
+    git: https://github.com/khiyamiftikhar/pwm-line.git
+    path: components/pwm_line_interface

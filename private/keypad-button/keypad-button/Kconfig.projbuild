@@ -1,0 +1,29 @@
+menu "Keypad Button"
+    config TOTAL_BUTTON_OBJECTS
+        int "Total number of button objects"
+        default 16
+        range 16 32
+        help
+            Specifies the total number of button objects for the keypad.
+
+    config DEBOUNCE_DURATION
+        int "debouncing duration"
+        default 20          #ms
+        range 20 50
+        help
+            Debounce duration before entering in to pressed state
+
+    config LONG_PRESS_DURATION
+        int "long press duration"
+        default 1000          #ms
+        range 900 1100
+        help
+            If button kept press for this duration, it will be considered long press
+
+    config REPEAT_PRESS_DURATION
+        int "Repeat press duration"
+        default 5000          #ms
+        range 400 500
+        help
+            If button kept press after long press, after every repeat duration new press will be considered
+endmenu

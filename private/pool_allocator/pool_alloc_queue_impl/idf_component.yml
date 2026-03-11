@@ -1,0 +1,4 @@
+dependencies:
+  pool_alloc_interface:
+    git: https://github.com/khiyamiftikhar/pool-allocator.git
+    path: components/pool_alloc_interface
