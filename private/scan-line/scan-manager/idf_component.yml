@@ -1,8 +1,0 @@
-dependencies:
-  pwm-capture:
-    git: https://github.com/khiyamiftikhar/scan-line.git
-    path: "components/pwm-capture"
-  scanner-common:
-    git: https://github.com/khiyamiftikhar/scan-line.git
-    path: "components/scanner-common"
-  

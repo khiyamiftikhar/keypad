@@ -1,7 +1,0 @@
-dependencies:
-  capture-line-interface:
-    git: https://github.com/khiyamiftikhar/scan-line.git
-    path: components/capture-line-interface
-  common:
-    git: https://github.com/khiyamiftikhar/scan-line.git
-    path: components/scanner-common
