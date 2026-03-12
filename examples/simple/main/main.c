@@ -24,9 +24,9 @@ void app_main(){
     //esp_log_level_set("ketboard_impl", ESP_LOG_NONE);
 
     //Create an array of Column GPIOs
-    uint8_t col_gpios[]={12,13,14,15};
+    uint8_t row_gpios[]={12,13,14,15};
     //Create an array of row GPIOs
-    uint8_t row_gpios[]={18,19,22,23};
+    uint8_t col_gpios[]={18,19,22,23};
 
     //Create and fill config struct
     keypad_config_t config={    .cb=keyPadHandler,      //Assign Callback
