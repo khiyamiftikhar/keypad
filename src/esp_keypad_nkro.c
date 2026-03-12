@@ -467,4 +467,35 @@ keypad_interface_t* keypadCreate(keypad_config_t* config){
         
 }
 
+/* ─────────────────────────────────────────────────────────────────────────────
+ * ADD THIS to esp_keypad_nkro.h  (public API section)
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * @brief  Convert a key_event_t value to a human-readable C string.
+ *
+ * The returned pointer is to a string literal – never free it.
+ *
+ * @param  event   Any value of key_event_t
+ * @return         "KEY_PRESSED" | "KEY_RELEASED" | "KEY_LONG_PRESSED" |
+ *                 "KEY_REPEATED" | "UNKNOWN_EVENT"
+ */
+const char *key_event_to_str(key_event_t event);
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * ADD THIS to esp_keypad_nkro.c  (implementation)
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+const char *key_event_to_str(key_event_t event)
+{
+    switch (event) {
+        case KEY_PRESSED:      return "KEY_PRESSED";
+        case KEY_RELEASED:     return "KEY_RELEASED";
+        case KEY_LONG_PRESSED: return "KEY_LONG_PRESSED";
+        case KEY_REPEATED:     return "KEY_REPEATED";
+        default:               return "UNKNOWN_EVENT";
+    }
+}
+
                                 

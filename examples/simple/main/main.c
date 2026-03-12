@@ -3,16 +3,17 @@
 #include "esp_keypad_nkro.h"
 
 
-
 static const char* TAG="main";
 
-void keyPadHandler(key_event_t event,keypad_event_data_t* evt_data){
-
-        ESP_LOGI(TAG, "event %d   key_val %s", event,(char*)&evt_data->key_id);
-
-
+ 
+void keyPadHandler(key_event_t event, keypad_event_data_t *evt_data)
+{
+    ESP_LOGI(TAG, "event=%-18s  key='%c'  timestamp=%lums",
+             key_event_to_str(event),
+             (char)evt_data->key_id,
+             (unsigned long)evt_data->time_stamp);
 }
-
+ 
 
 void app_main(){
 

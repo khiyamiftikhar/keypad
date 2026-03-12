@@ -30,6 +30,8 @@ typedef struct{
 
 typedef void (*keypadCallback)(key_event_t event,keypad_event_data_t* evt_data);
 
+const char *key_event_to_str(key_event_t event);
+
 typedef struct keypad_interface{
     /*These attribures such as dimensions keymap etc are set during creation so not available
     int (*setDimensions)(uint8_t total_rows,uint8_t total_cols);
