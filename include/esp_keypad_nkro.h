@@ -6,8 +6,8 @@
 #include <stdint.h>
 #include "stdlib.h"
 
-#define     KPAD_MAX_ROWS       CONFIG_KPAD_MAX_ROWS
-#define     KPAD_MAX_COLS       CONFIG_KPAD_MAX_COLS
+#define     KPAD_MAX_ROWS       CONFIG_MATRIX_KEYPAD_MAX_ROWS
+#define     KPAD_MAX_COLS       CONFIG_MATRIX_KEYPAD_MAX_COLS
 
 typedef enum 
     {SINGLE,     //No repeat when kept press
