@@ -5,7 +5,7 @@
 #include <esp_log.h>
 
 
-#include "keypad_dev.h"
+#include "esp_keypad_nkro.h"
 
 #include "my_timer.h"
 #include "pool_queue.h"
@@ -16,9 +16,9 @@
 #include "keypad_button.h"
 
 
-#define MAX_KEYPADS              CONFIG_MAX_KEYPADS
-#define MAX_SIMULTANEOUS_KEYS    CONFIG_MAX_SIMULTANEOUS_KEYS
-#define MAX_BUTTONS             (KPAD_MAX_COLS*KPAD_MAX_ROWS)
+#define MAX_KEYPADS              CONFIG_MATRIX_KEYPAD_MAX_KEYPADS
+#define MAX_SIMULTANEOUS_KEYS    CONFIG_MATRIX_KEYPAD_MAX_SIMULTANEOUS_KEYS
+#define MAX_BUTTONS             (CONFIG_MATRIX_KEYPAD_MAX_COLS*CONFIG_MATRIX_KEYPAD_MAX_ROWS)
 
 //These #defines are internal
 //This first queue is the one that gets both scanner and timer events and passes to the corresponding button

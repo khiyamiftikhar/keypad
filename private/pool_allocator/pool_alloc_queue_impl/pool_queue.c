@@ -11,11 +11,11 @@
 
 
 
-#define MAX_ELEMENTS    CONFIG_MAX_ELEMENTS     //Total elements a pool can host
-                                                //Due to static allocation limitation, it is same for all pool objects
-#define TIME_OUT        CONFIG_MAX_WAIT_TIME    //To be put in xQueueSend and xQueueReceive
-#define MAX_POOLS       CONFIG_MAX_POOLS        //Total pool objects. The above max element limitation 
-                                                //applies here. All pools will share the same max elements
+#define MAX_ELEMENTS    (CONFIG_MATRIX_KEYPAD_MAX_SIMULTANEOUS_KEYS)   //Total elements a pool can host. this is used to hold timer objects which are assigned to the pressed keys
+                                                        //Due to static allocation limitation, it is same for all pool objects
+#define TIME_OUT        3         //ms                  //To be put in xQueueSend and xQueueReceive
+#define MAX_POOLS       (CONFIG_MATRIX_KEYPAD_MAX_KEYPADS)     //Total pool objects. The above max element limitation 
+                                                        //applies here. All pools will share the same max elements
 
 #define configTICK_RATE_HZ  CONFIG_FREERTOS_HZ
 
