@@ -1,5 +1,5 @@
-#ifndef KEYPAD_DEV_H
-#define KEYPAD_DEV_H
+#ifndef MATRIX_KEYPAD_NKRO_H
+#define MATRIX_KEYPAD_NKRO_H
 
 
 //#include "keypad_interface.h"
