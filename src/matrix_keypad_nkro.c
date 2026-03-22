@@ -5,7 +5,7 @@
 #include <esp_log.h>
 
 
-#include "esp_keypad_nkro.h"
+#include "matrix_keypad_nkro.h"
 
 #include "my_timer.h"
 #include "pool_queue.h"
@@ -468,7 +468,7 @@ keypad_interface_t* keypadCreate(keypad_config_t* config){
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * ADD THIS to esp_keypad_nkro.h  (public API section)
+ * ADD THIS to matrix_keypad_nkro.h  (public API section)
  * ───────────────────────────────────────────────────────────────────────────── */
 
 /**
@@ -484,7 +484,7 @@ const char *key_event_to_str(key_event_t event);
 
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * ADD THIS to esp_keypad_nkro.c  (implementation)
+ * ADD THIS to matrix_keypad_nkro.c  (implementation)
  * ───────────────────────────────────────────────────────────────────────────── */
 
 const char *key_event_to_str(key_event_t event)
