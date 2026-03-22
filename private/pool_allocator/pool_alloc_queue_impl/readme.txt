@@ -1,0 +1,2 @@
+This is the queue based implementation of the pool  allocator interface. Queue structure of freertos is 
+used because it is not just thread safe, but also manages priority inversion and ISR is not disabled

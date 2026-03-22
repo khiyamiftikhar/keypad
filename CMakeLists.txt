@@ -1,8 +1,25 @@
-# For more information about build system see
-# https://docs.espressif.com/projects/esp-idf/en/latest/api-guides/build-system.html
-# The following five lines of boilerplate have to be in your project's
-# CMakeLists in this exact order for cmake to work correctly
-cmake_minimum_required(VERSION 3.16)
+file(GLOB_RECURSE KEYPAD_SRCS
+    src/*.c
+    private/*.c
+)
 
-include($ENV{IDF_PATH}/tools/cmake/project.cmake)
-project(keypad)
+idf_component_register(
+    SRCS ${KEYPAD_SRCS}
+    INCLUDE_DIRS include
+    PRIV_INCLUDE_DIRS
+        private/keypad-button/keypad-button
+        private/pool_allocator/pool_alloc_interface/
+        private/pool_allocator/pool_alloc_queue_impl/
+        private/scan-line/capture-line-interface/
+        private/scan-line/pwm-capture/
+        private/scan-line/scan-manager/
+        private/scan-line/scanner-common/
+        private/pwm-line/probe-manager/
+        private/pwm-line/pwm_line_interface/
+        private/pwm-line/pwm-line/
+        private/timer/timer_interface/
+        private/timer/timer_impl/
+
+    PRIV_REQUIRES
+        esp_driver_ledc esp_driver_gpio esp_driver_mcpwm esp_timer
+)

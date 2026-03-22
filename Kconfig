@@ -1,0 +1,57 @@
+menu "Matrix Keypad"
+
+config MATRIX_KEYPAD_MAX_KEYPADS
+    int "Maximum keypad instances"
+    default 1
+    range 1 5
+    help
+        Maximum number of keypad objects that can be created.
+
+config MATRIX_KEYPAD_MAX_SIMULTANEOUS_KEYS
+    int "Maximum simultaneous keys"
+    default 4
+    range 1 10
+    help
+        Maximum number of key presses that can be detected at the same time.
+
+config MATRIX_KEYPAD_MAX_ROWS
+    int "Maximum rows"
+    default 4
+    range 1 8
+    help
+        Maximum rows supported by the keypad.
+
+config MATRIX_KEYPAD_MAX_COLS
+    int "Maximum columns"
+    default 4
+    range 1 8
+    help
+        Maximum columns supported by the keypad.
+
+menu "Button Behaviour"
+
+config MATRIX_KEYPAD_DEBOUNCE_MS
+    int "Debounce duration (ms)"
+    default 20
+    range 20 50
+    help
+        Time the signal must remain stable before a press is confirmed.
+
+config MATRIX_KEYPAD_LONG_PRESS_MS
+    int "Long press duration (ms)"
+    default 1000
+    range 900 1100
+    help
+        Duration after which a key press is considered a long press.
+
+config MATRIX_KEYPAD_REPEAT_PRESS_MS
+    int "Repeat press interval (ms)"
+    default 500
+    range 400 600
+    help
+        After a long press, a new press event will be generated every
+        repeat interval while the key remains pressed.
+
+endmenu
+
+endmenu
