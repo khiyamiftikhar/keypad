@@ -51,20 +51,19 @@ typedef struct keypad_interface{
 
 
 
-typedef struct{
-    uint8_t mode;
-    uint8_t keymap[KPAD_MAX_ROWS][KPAD_MAX_COLS];
-    uint8_t* row_gpios;
-    uint8_t total_rows;
-    uint8_t* col_gpios;
-    uint8_t total_cols;
-    keypadCallback cb;
-    
-}keypad_config_t;
+typedef struct {
+    uint8_t         mode;
+    uint8_t        *keymap;      // flat [total_rows * total_cols] — caller owns this
+    uint8_t        *row_gpios;   // [total_rows]
+    uint8_t         total_rows;
+    uint8_t        *col_gpios;   // [total_cols]
+    uint8_t         total_cols;
+    keypadCallback  cb;
+} keypad_config_t;
 
 
 
 
-keypad_interface_t* keypadCreate(keypad_config_t* config);
+int keypadCreate(keypad_config_t* config, keypad_interface_t** out_if);
 
 #endif
