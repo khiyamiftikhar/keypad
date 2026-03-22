@@ -12,7 +12,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "scan_manager.h"
-#include "probe_manager.h"
+#include "interleaved_pwm.h"
 #include "keypad_button.h"
 
 
@@ -87,8 +87,8 @@ typedef struct keypad_dev{
     uint8_t total_rows; //The max rows is for the mem allocated, but this is the true value for the instance
     uint8_t col_gpio[KPAD_MAX_COLS];               //GPIOs for the cols of keypad
     uint8_t total_cols;//The max rows is for the mem allocated, but this is the true value for the instance
-    scanner_interface_t* scanner;
-    prober_t prober;
+    interleaved_pwm_t prober;           //Send PWM signals
+    pulse_decoder_t scanner[KPAD_MAX_COLS]; //Detect pulses
     keypad_interface_t interface;
     timer_interface_t* timers[MAX_SIMULTANEOUS_KEYS];   //array of pointers
     pool_alloc_interface_t* timer_pool; //This is the object passsed to button objects
@@ -101,12 +101,14 @@ typedef struct keypad_dev{
 }keypad_dev_t;
 
 
+
 //Pool of th objects, so that to have static allocation
+/*
 typedef struct{
     keypad_dev_t array[MAX_KEYPADS];
     uint8_t allocated_count;
 }keypad_pool_t;
-
+*/
 
 
 static keypad_pool_t pool;
@@ -334,15 +336,16 @@ static uint32_t pulse_widths[]={2000,2400,2800,3200};        //Microseconds
 static prober_t keypad_prober;
 static esp_err_t configKeypadOutput(prober_t* self,uint8_t* output_gpio,uint8_t total_outputs){
 
-    prober_config_t config={0};
+    interleaved_pwm_config_t config={0};
 
     config.gpio_no=output_gpio;
     config.total_gpio=total_outputs;
     
     config.pulse_widths=pulse_widths;
-    config.dead_time=1000;          //1000 microseconds
-    config.time_period=14500;   //(2000+1000)+(2400+1000)+(2800+1000)+(3200+1000
+    config.dead_time=500;          //1000 microseconds
 
+    config.time_period=15000;   //(2000+1000)+(2400+1000)+(2800+1000)+(3200+1000
+    config.dead_time=500;       //microseconds
     //initalizing the prober member of self. It needs to be changed to have internal static allocation inside scanner
     int ret=proberCreate(self,&config);
 
@@ -427,18 +430,100 @@ static esp_err_t configKeypadInput(keypad_dev_t* self,uint8_t* input_gpio,uint8_
 
 
 
+/* Helper — lives in the .c file only */
+#define ALIGN_UP(sz, a)  ( ((sz) + (a) - 1) & ~((a) - 1) )
 
-keypad_interface_t* keypadCreate(keypad_config_t* config){
+keypad_dev_t keypadAlloc(keypad_config_t *config)
+{
+    /* --- validate --- */
+    if (!config || !out_if)                         return KEYPAD_ERR_NULL;
+    if (!config->total_rows || !config->total_cols) return KEYPAD_ERR_INVALID;
+    if (!config->keymap)                            return KEYPAD_ERR_NULL;
+    if (!config->row_gpios || !config->col_gpios)   return KEYPAD_ERR_NULL;
+
+    uint8_t rows = config->total_rows;
+    uint8_t cols = config->total_cols;
+
+    /*
+     *  Single contiguous block layout:
+     *
+     *  [ keypad_dev_t                      ]
+     *  [ keymap    uint8_t[rows * cols]    ]
+     *  [ row_gpios uint8_t[rows]           ]
+     *  [ col_gpios uint8_t[cols]           ]
+     *  [ scanner   pulse_decoder_t[cols]   ]  <- aligned
+     *  [ timers    timer_interface_t*[...] ]  <- aligned
+     *  [ button    button_interface_t*[...]]  <- aligned
+     */
+
+    size_t off = 0;
+
+    size_t off_dev     = off;
+    off += ALIGN_UP(sizeof(keypad_dev_t), _Alignof(keypad_dev_t));
+
+    size_t off_keymap  = off;  off += rows * cols * sizeof(uint8_t);
+    size_t off_rowgpio = off;  off += rows         * sizeof(uint8_t);
+    size_t off_colgpio = off;  off += cols         * sizeof(uint8_t);
+
+    off = ALIGN_UP(off, _Alignof(pulse_decoder_t));
+    size_t off_scanner = off;  off += cols * sizeof(pulse_decoder_t);
+
+    off = ALIGN_UP(off, _Alignof(void *));
+    size_t off_timers  = off;  off += MAX_SIMULTANEOUS_KEYS * sizeof(timer_interface_t *);
+    size_t off_buttons = off;  off += MAX_BUTTONS           * sizeof(button_interface_t *);
+
+    size_t total = off;
+
+    /* --- allocate --- */
+    uint8_t *block = calloc(1, total);
+    if (!block) return NULL;
+
+    keypad_dev_t *dev = (keypad_dev_t *)(block + off_dev);
+
+    /* --- wire internal pointers --- */
+    dev->keymap    = (uint8_t *)(block + off_keymap);
+    dev->row_gpios = (uint8_t *)(block + off_rowgpio);
+    dev->col_gpios = (uint8_t *)(block + off_colgpio);
+    dev->scanner   = (pulse_decoder_t *)(block + off_scanner);
+    dev->timers    = (timer_interface_t **)(block + off_timers);
+    dev->button    = (button_interface_t **)(block + off_buttons);
+
+    /* --- copy from config --- */
+    dev->total_rows = rows;
+    dev->total_cols = cols;
+    dev->mode       = config->mode;
+    dev->cb         = config->cb;
+
+    memcpy(dev->keymap,    config->keymap,    rows * cols * sizeof(uint8_t));
+    memcpy(dev->row_gpios, config->row_gpios, rows        * sizeof(uint8_t));
+    memcpy(dev->col_gpios, config->col_gpios, cols        * sizeof(uint8_t));
+
+    /* config->keymap, row_gpios, col_gpios are now no longer needed */
+    /* dev owns its own copies inside the block                       */
+
+    
+
+    return dev;
+}
 
 
-    keypad_dev_t* self=poolGet();
-    int ret;
-    if(self==NULL || config==NULL)
+
+
+int keypadCreate(keypad_config_t* config, keypad_interface_t** out_if){
+
+
+    if(config==NULL)
         return NULL;
+
+    
+    keypad_dev_t* self=keypadAlloc(config);
     
     
-    copyUserParameters(self,config);
-    //Here we are sending address bcz argument is double pointer and it is required to have the address of this pointer member inside the struct
+    if(self==NULL)
+        return ESP_ERR_NO_MEM;
+    
+    
+    
     ret=configKeypadInput(self,self->col_gpio,self->total_cols,self->total_rows);
     ESP_LOGI(TAG,"scanner %d",ret);
     //This is already an instance member so argument is single pointer. No context is required for this since no callback
