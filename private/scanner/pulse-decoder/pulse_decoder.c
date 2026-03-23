@@ -80,6 +80,7 @@ static pwm_capture_class_data_t g_class = {0};
  */
 typedef struct {
     uint8_t                    gpio_num;
+    uint8_t                     line_num; //if created as a group like keypad, then col no,
     mcpwm_cap_timer_handle_t   cap_timer;
     mcpwm_cap_channel_handle_t cap_chan;
     pulse_decoder_interface_t  interface;       /* embedded vtable — always use &this */

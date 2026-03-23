@@ -11,9 +11,8 @@ capture channels
 
 #include <string.h>
 #include "esp_log.h"
-#include "pwm_capture.h"
-#include "pwm_capture.h"
-#include "capture_event_data.h"
+#include "esp_err.h"
+#include "pulse_decoder.h"
 #include "scan_manager.h"
 
 
@@ -43,31 +42,30 @@ static const char* TAG = "scan manager";
 
 //This needs to be modified with void pointers because to avoid includong pwm_capture.h  here
 struct scanner{
-    uint8_t total_lines;
-    pwm_capture_class_data_t* class_data;    //data share among all the members
-    pwm_capture_t* list;                    //Initialized internally
-    QueueHandle_t queue;                    //Separate Queue for each capture unit bcz ISR queue API doesn't wait and fails immediately
-    TaskHandle_t capture_task;              //Corresponding task
+    uint8_t* gpio_no;
+    uint8_t total_gpio;
+    uint32_t* pwm_widths_array; //just pointers here , The pulse decoder object already has space for mem
+    uint8_t total_signals;
+    uint32_t tolerance;
+    //QueueHandle_t queue;                    //Separate Queue for each capture unit bcz ISR queue API doesn't wait and fails immediately
+    //TaskHandle_t capture_task;              //Corresponding task
+    scannerCallBack cb;
     scanner_interface_t interface;
     void* context;
+    pulse_decoder_interface_t* pulse_decoder[];   //Flexible array, put at end as required
 };
 
 typedef struct scanner scanner_t;
 
-/*This is the static pool from where users will get the scanner objects, so no dynamic alloc*/
-typedef struct scanner_pool{
-
-    scanner_t sc[MAX_SCANNERS];
-    uint8_t count;
-}scanner_pool_t;
 
 
-static scanner_pool_t pool;
+
 //typedef struct pulse_scanner scanner_t;
 
 
 
 
+/*
 /// @brief This task receives data from multiple capture objects
 /// @param args 
 static void task_processScannerQueue(void* args){
@@ -88,16 +86,21 @@ static void task_processScannerQueue(void* args){
 
 }
 
+*/
 
 
 
-
-static void callback(scanner_event_data_t* data,void* context){
+static void pulseDecoderEventHandler(pulse_decoder_event_data_t* data,void* context){
 
     scanner_t* self=(scanner_t*) context;
-    QueueHandle_t queue=self->queue;
+    //QueueHandle_t queue=self->queue;
 
-    xQueueSend(queue,data,QUEUE_WAIT_TICKS);
+    scanner_event_data_t  evt_data;
+    evt_data.line_number=data->line_number;
+    evt_data.source_number= data->source_number;
+
+    self->cb(&evt_data,self->context);
+    //xQueueSend(queue,data,QUEUE_WAIT_TICKS);
 }
 
 static int startScanning(scanner_interface_t* self){
@@ -105,15 +108,15 @@ static int startScanning(scanner_interface_t* self){
     scanner_t* scanner = container_of(self,scanner_t,interface);
 
 
-    uint8_t total_lines=scanner->total_lines;
+    uint8_t total_lines=scanner->total_gpio;
     ESP_LOGI(TAG,"got u %d",total_lines);
 
 
     
     for(uint8_t i=0; i<total_lines ; i++){
 
-        scanner->list->interface.startMonitoring(&scanner->list[i].interface);
-
+        scanner->pulse_decoder[i]->startMonitoring(scanner->pulse_decoder[i]);
+        
     }
     
     return 0;    
@@ -121,101 +124,87 @@ static int startScanning(scanner_interface_t* self){
 
 
 
+
+static int stopScanning(scanner_interface_t* self){
+
+    scanner_t* scanner = container_of(self,scanner_t,interface);
+
+
+    uint8_t total_lines=scanner->total_gpio;
+    ESP_LOGI(TAG,"got u %d",total_lines);
+
+
+    
+    for(uint8_t i=0; i<total_lines ; i++){
+
+        scanner->pulse_decoder[i]->stopMonitoring(scanner->pulse_decoder[i]);
+        
+    }
+    
+    return 0;    
+}
+
+
 /// @brief Get one element of pool, and increment the count. Not thread safe
 /// @return 
-static scanner_t* poolGet(){
-    
-    if(pool.count==MAX_SCANNERS)
-        return NULL;
-    
-    scanner_t* self=&pool.sc[pool.count];
-        pool.count++;
-    return self;
 
-}
-
-static void poolReturn(){
-
-    pool.count--;
-
-}
-
-
-
-scanner_interface_t* scannerCreate(scanner_config_t* config){
+esp_err_t scannerCreate(scanner_config_t* config,scanner_interface_t** scanner){
 
 
     //All scanners already allocated
+    if(config==NULL)
+        return ESP_FAIL;
 
-    scanner_t* self=poolGet();
+    scanner_t* self=(scanner_t*) malloc(sizeof(scanner_t)+sizeof(pulse_decoder_interface_t*)*config->total_gpio);
 
     
-    if(self==NULL || config==NULL)
+    if(self==NULL)
         return NULL;
 
     //Get one  scanner_t element from pool
     
     
-    uint8_t total_gpio=config->total_gpio; 
-    uint8_t* gpio_no=config->gpio_no;
-    uint8_t total_signals=config->total_signals;
-    uint32_t* pwm_widths_array=config->pwm_widths_array;
-    uint32_t tolerance=config->tolerance;
-    uint32_t min_width=config->min_width;
-    callbackForScanner cb=config->cb;
-
-
-
-    
-    //Assign the memory to the pointers, list member gets the memory after the struct
-    //self->list=(pwm_capture_t*)((uint8_t*)self + sizeof(scanner_t));
-
-    self->list=(pwm_capture_t*) malloc(sizeof(pwm_capture_t)*total_gpio);
-    //The class data gets the memory  after the list
-    pwm_capture_class_data_t* class_data=(pwm_capture_class_data_t*) malloc(sizeof(pwm_capture_class_data_t));
-
-
-
-    self->total_lines=total_gpio;
-    self->interface.callback=cb;
-    self->interface.startScanning=startScanning;
+    self->total_gpio=config->total_gpio; 
+    self->gpio_no=config->gpio_no;
+    self->total_signals=config->total_signals;
+    self->pwm_widths_array=config->pwm_widths_array;
+    self->tolerance=config->tolerance;
+    self->cb=config->cb;
     self->context=config->context;
-    
-    
-    
-    //Class data init of capture object
-    //Restart if error
-    int ret=0;
-    /*The callback paramter passed here is the intermediate callback defined in this file
-    The callback paramter received in this function is the user callback called by this callback
-    defined in this file
-    */
-    ESP_ERROR_CHECK(captureClassDataInit(class_data,min_width, tolerance,pwm_widths_array,total_gpio,total_signals, callback,(void*)self));
 
-    self->class_data=class_data;
-    /*
-    if(ret!=0)
-        return ret;
-    */
 
-    //Create all the instances of the capture objects now
 
-    for(uint8_t i=0;i<total_gpio;i++){
+   
+    pulse_decoder_config_t decoder_config={0};
+    
+    decoder_config.context = (void*)self;
+    decoder_config.tolerance_us=config->tolerance;
+    decoder_config.total_signals=config->total_signals;
+    decoder_config.pulse_widths_us=config->pwm_widths_array;
+    
+    for(uint8_t i=0;i<config->total_gpio;i++){
         
-        //The captureCreate function requires that
-        memset(&self->list[i],0,sizeof(pwm_capture_t));
-        //Assign each member of the list which is pwm_capture_t type
-        self->list[i].class_data=class_data;
-        self->list[i].index=i;                  //So that send index number instead of gpio number in callback
-        ESP_ERROR_CHECK(captureCreate(&self->list[i],class_data,gpio_no[i]));
-        self->class_data->count++;
         
-        /*
-        if(ret!=0)
-            return ret;*/
+        decoder_config.gpio_num = config->gpio_no[i];
+        decoder_config.line_num = i;
+        
+        esp_err_t ret=pulseDecoderCreate(&decoder_config,&self->pulse_decoder[i]);
+        
+        if(ret!=ESP_OK){
+            for(uint8_t j=i-1; j>=0;j--){
+                self->pulse_decoder[i]->destroy(self->pulse_decoder[i]);
+               
+            }
+
+            free(self);
+            return ESP_FAIL;
+
+        }
+
     }
 
 
+    /*
     self->queue=xQueueCreate(QUEUE_LENGTH,sizeof(scanner_event_data_t));
     if(self->queue==NULL){
         poolReturn();           //Give the element back. Just decrements the pointer, bcz actual element is never moved
@@ -225,13 +214,17 @@ scanner_interface_t* scannerCreate(scanner_config_t* config){
     if(xTaskCreate(task_processScannerQueue,"merge_captures",4096,(void*) self,0,&self->capture_task)!=pdPASS){
         poolReturn();
         return NULL;
-    }
+    }*/
 
 
  
+    self->interface.startScanning=startScanning;
+    self->interface.stopScanning=stopScanning;
 
 
-    return &(self->interface);
+    *scanner =&(self->interface);
+
+    return ESP_OK;
 
 }
 

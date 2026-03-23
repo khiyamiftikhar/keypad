@@ -11,7 +11,8 @@
 
 
 
-#define MAX_ELEMENTS    (CONFIG_MATRIX_KEYPAD_MAX_SIMULTANEOUS_KEYS)   //Total elements a pool can host. this is used to hold timer objects which are assigned to the pressed keys
+#define MAX_ELEMENTS    (16)   //Total elements a pool can host. this is used to hold timer objects which are assigned to the pressed keys
+                                //must be improved to get this dynamically
                                                         //Due to static allocation limitation, it is same for all pool objects
 #define TIME_OUT        3         //ms                  //To be put in xQueueSend and xQueueReceive
 #define MAX_POOLS       (CONFIG_MATRIX_KEYPAD_MAX_KEYPADS)     //Total pool objects. The above max element limitation 

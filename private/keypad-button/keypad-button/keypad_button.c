@@ -51,14 +51,16 @@ typedef struct keypad_button{
 }keypad_button_t;
 
 
+/*
 typedef struct button_pool{
     keypad_button_t button_array[TOTAL_BUTTON_OBJECTS];
     uint8_t count;
 
 }button_pool_t;
+*/
 
 
-static button_pool_t pool={0};
+//static button_pool_t pool={0};
 
 #define CONTAINER_OF(ptr, type, member) \
     ((type *)((char *)(ptr) - offsetof(type, member)))
@@ -331,6 +333,7 @@ static int buttonStateUpdateEventHandler(button_interface_t* self,button_state_u
 
 /// @brief Get one object from static array. not thread safe
 /// @return 
+/*
 static keypad_button_t* poolGet(){
     
     if(pool.count==TOTAL_BUTTON_OBJECTS)
@@ -348,22 +351,34 @@ static void poolReturn(){
 
 }
 
+*/
 
+int buttonDestroy(struct button_interface* self){
+    if(self==NULL)
+        return -1;
+    keypad_button_t* btn = container_of(self,keypad_button_t,interface);
 
+    if(btn->timer!=NULL){
+        timerReturn(btn->timer_pool,btn->timer);
+
+    }
+
+    free(btn);
+
+}
 
 button_interface_t* keypadButtonCreate(button_config_t* config){
-    if(config==NULL)
+    if(config==NULL ||
+    config->timer_pool==NULL)
         return NULL;
+    
 
     //Get button object from the static button pool
-    keypad_button_t* self=poolGet();
+    keypad_button_t* self=(keypad_button_t*) malloc(sizeof(keypad_button_t));//poolGet();
 
     if(self==NULL)
         return NULL;
-    if(config->timer_pool==NULL){
-        ESP_LOGI(TAG,"no pool");
-        return NULL;
-    }
+    
     //Specifically did this for the bool long_pressed
     memset(self,0,sizeof(keypad_button_t));        
     uint8_t button_index=config->button_index;
@@ -385,5 +400,6 @@ button_interface_t* keypadButtonCreate(button_config_t* config){
     self->context=config->context;
     self->cb=cb;
     self->interface.buttonEventInform=buttonStateUpdateEventHandler;
+    self->interface.buttonDestroy=buttonDestroy;
     return &self->interface;
 }

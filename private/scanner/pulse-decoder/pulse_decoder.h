@@ -4,6 +4,7 @@
 
 #include "stdint.h"
 #include "stddef.h"
+#include "esp_err.h"
 //#include "capture_interface.h"
 //#include "capture_event_data.h"
 
@@ -18,6 +19,7 @@ typedef struct pulse_decoder_event_data{
 
     uint8_t source_number;          //based on pwm width array
     uint8_t line_number;            //1 , 2 3 instead of gpio number 222,34 etc
+    uint8_t gpio_number;
 
 }pulse_decoder_event_data_t;
 
@@ -46,6 +48,7 @@ typedef struct pulse_decoder_interface{
 
 typedef struct{
     uint8_t gpio_num;
+    uint8_t line_num;               //only required when a group is created and may need the index in the group in callbacl 
     uint32_t* pulse_widths_us;
     uint8_t total_signals;          //length of pulse_width_us array
     uint32_t tolerance_us;         //+/- value   

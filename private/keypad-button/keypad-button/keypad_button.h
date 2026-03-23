@@ -42,6 +42,7 @@ typedef void (*buttonCallBack)(uint8_t button_index,button_event_data_t* evt,voi
 typedef struct button_interface{
 
     int (*buttonEventInform)(struct button_interface* self,button_state_update_event_t evt);
+    int (*buttonDestroy)(struct button_interface* self);
     buttonCallBack cb;
     
 }button_interface_t;

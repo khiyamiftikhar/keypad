@@ -1,3 +1,4 @@
+#include "esp_log.h"
 #include "init.h"
 
 #define MAX_KEYPADS              CONFIG_MATRIX_KEYPAD_MAX_KEYPADS
@@ -5,16 +6,22 @@
 #define MAX_BUTTONS             (CONFIG_MATRIX_KEYPAD_MAX_COLS*CONFIG_MATRIX_KEYPAD_MAX_ROWS)
 
 
+static const char* TAG="init";
 
-
-esp_err_t configKeypadButtons(keypad_button_t** buttons,uint8_t* keymap,uint8_t total_buttons,void* context){
+esp_err_t configKeypadButtons(button_interface_t** buttons,
+                                uint8_t* keymap,
+                                uint8_t total_buttons,
+                                pool_alloc_interface_t* timer_pool,
+                                uint32_t prober_time_period,
+                                buttonCallBack buttonEventHandler,
+                                void* context){
 
     button_config_t config={0};
-    config.scan_time_period=self->prober.time_period + 6000;
-    ESP_LOGI(TAG,"timer period %"PRIu32,self->prober.time_period);
-    config.cb=buttonHandler;
+    config.scan_time_period=prober_time_period + 6000; //If no pulse comes for this duraition for a pressed button, then it will be assumned to be relased
+    ESP_LOGI(TAG,"timer period %"PRIu32,prober_time_period);
+    config.cb=buttonEventHandler;
     config.context=(void*)context;
-    config.timer_pool=self->timer_pool;
+    config.timer_pool=timer_pool;
     
     
     
@@ -125,11 +132,7 @@ esp_err_t configKeypadOutput(interleaved_pwm_interface_t** self,uint8_t* output_
 
 }
 
-esp_err_t configKeypadTimers(
-    timer_interface_t **timers,
-    uint8_t total_timers,
-    void *context)
-{
+esp_err_t configKeypadTimers(timer_interface_t **timers,  uint8_t total_timers,  void *context,buttonCallBack timerEventHandler){
     char name[10];
 
     for (uint8_t i = 0; i < total_timers; i++) {
@@ -145,12 +148,14 @@ esp_err_t configKeypadTimers(
     return ESP_OK;
 }
 
-esp_err_t configTimerPool(pool_alloc_interface_t** pool ,timer_interface_t** timers,uint8_t total_objects){
+esp_err_t configTimerPool(pool_alloc_interface_t** out ,timer_interface_t** timers,uint8_t total_objects){
 
     //This call does not require any paramaters bcz Max objects that a pool can manage is the only requirement
     //which is set through Kconfig
-    *pool=poolQueueCreate();
-    if(*pool==NULL)
+    pool_alloc_interface_t* pool=poolQueueCreate();
+
+    
+    if(pool==NULL)
         return ESP_FAIL;
 
     //Now fill the pool
@@ -159,9 +164,12 @@ esp_err_t configTimerPool(pool_alloc_interface_t** pool ,timer_interface_t** tim
         if(timers[i]==NULL)
             return ESP_FAIL;
         else
-            *pool->poolFill(*pool,(void*)timers[i]);
+        
+            pool->poolFill(pool,(void*)timers[i]);
 
     }
+    
+    *out=pool;
 
     return ESP_OK;
 
@@ -173,27 +181,38 @@ esp_err_t configTimerPool(pool_alloc_interface_t** pool ,timer_interface_t** tim
 /// @param total_inputs Total gpios
 /// @param total_outputs Total outputs of matrix keypad, each with different pwm signal and thus different signal
 /// @return 
-esp_err_t configKeypadInput(pulse_decoder_interface_t** self,uint8_t* input_gpio,uint8_t total_inputs,uint8_t total_outputs){
+
+
+esp_err_t configKeypadInput(scanner_interface_t** self,
+                            uint8_t* input_gpio,
+                            uint8_t total_inputs,   //Total loop interations
+                            uint8_t total_outputs,  //Each line will detect this many pulses
+                            uint32_t* pulse_widths_us,
+                            scannerCallBack scannerEventHandler,
+                            void* context) //The keypad object, because multiple keppad can be crrated
+{
 
     scanner_config_t config={0};
     
-
-
-    config.gpio_no=input_gpio;
-    config.total_gpio=total_inputs;
-    config.total_signals=total_outputs;
-    config.tolerance=100;       //microseconds so  0.1 milliseconds
-    config.pwm_widths_array=pulse_widths;
-    config.context=(void*)self; //This will later reterive the keypad_dev_t instance
-    config.cb=scannerEventHandler;
     
-    //Assigning the scanner member of the self
-    self->scanner=scannerCreate(&config);
 
-    if(self->scanner==NULL)
-        return ESP_FAIL;
+    
+    
+        config.gpio_no=input_gpio;
+        config.total_signals=total_outputs;
+        config.tolerance=100;       //microseconds so  0.1 milliseconds
+        config.pwm_widths_array=pulse_widths_us;
+        config.context=(void*)context; //This will later reterive the keypad_dev_t instance
+        config.cb=scannerEventHandler;
+        
+        
+        //Assigning the scanner member of the self
+        esp_err_t ret=scannerCreate(&config,self);
 
-    return ESP_OK;
+        if(ret!=NULL)
+            return ESP_FAIL;
+
+        return ESP_OK;
 
     
 }

@@ -1,7 +1,7 @@
 #ifndef SCANNER_H
 #define SCANNER_H
 
-#include "capture_event_data.h"
+
 
 
 
@@ -10,15 +10,30 @@
 #define ERR_SCANNER_MEM_ALLOC               (ERR_SCANNER_BASE-2)
 
 
+
+//Simply relaying what it receives from pulse decoder
+//Exact same members
+typedef struct scanner_event_data{
+
+    uint8_t source_number;          //based on pwm width array
+    uint8_t line_number;            //1 , 2 3 instead of gpio number 222,34 etc
+
+}scanner_event_data_t;
+
+
+
+void (*scannerCallback)(scanner_event_data_t* event_data,void* context);
+
 typedef struct scanner_interface{
    // void (*addCaptureLine)(scanner_interface_t* self,pwm_capture_t* line);
     int (*startScanning)(struct scanner_interface* self);
     int (*stopScanning)(struct scanner_interface* self);
+    int (*destroy)(struct scanner_interface* self);
     /*So the callback does not have self referencing because it will be defined by the user of this, 
         and purpose of self referencing is to access the private members of an instance which are
         different for each because they are also at different unique addresses
     */
-    void (*callback)(scanner_event_data_t* event_data,void* context);
+    
 }scanner_interface_t;
 
 
@@ -28,7 +43,7 @@ typedef struct scanner_interface{
 
 //This is defined separately just so that the scannerCreate callback parameter is simple
 //Scanner object creation results in a pointer
-typedef void (*callbackForScanner)(scanner_event_data_t* event_data,void* context);
+typedef void (*scannerCallBack)(scanner_event_data_t* event_data,void* context);
 
 
 
@@ -41,8 +56,7 @@ typedef struct scanner_config{
     uint8_t total_signals;
     uint32_t* pwm_widths_array;
     uint32_t tolerance;
-    uint32_t min_width;
-    callbackForScanner cb;
+    scannerCallBack cb;
     void* context;
 }scanner_config_t;
 
@@ -53,7 +67,7 @@ typedef struct scanner_config{
 
 //not used bcz struct shard in header
 //size_t scannerGetSize(uint8_t total_gpio, uint8_t total_signals);
-scanner_interface_t* scannerCreate(scanner_config_t* config);
+int scannerCreate(scanner_config_t* config,scanner_interface_t** scanner){
 
 
 #endif

@@ -43,8 +43,8 @@ typedef struct my_timer{
 
 typedef struct timer_pool{
 
-    my_timer_t timer_list[MAX_OBJECTS];
     uint8_t count;
+    my_timer_t timer_list[];    //Flexible Array
 }timer_pool_t;
 
 
@@ -194,6 +194,7 @@ int timerDestroy(timer_interface_t* self){
 
     esp_timer_handle_t timer_handle=my_timer->timer_handle;
     ESP_ERROR_CHECK(esp_timer_stop(timer_handle));
+    free(my_timer);
     return 0;
 
 }
@@ -202,6 +203,7 @@ int timerDestroy(timer_interface_t* self){
 
 /// @brief Get one element of pool, and increment the count. Not thread safe
 /// @return 
+/*
 static my_timer_t* poolGet(){
     
     if(timers.count==MAX_OBJECTS)
@@ -217,7 +219,7 @@ static void poolReturn(){
     timers.count--;
 
 }
-
+*/
 
 
 
@@ -226,14 +228,16 @@ static void poolReturn(){
 /// @param self 
 /// @param user_context This timer returns timer_interface pointer which could be pointer member of a struct which can have multiple instance. So user_context to figure out which instance
 /// @return 
+
 timer_interface_t* timerCreate(char* name,timerCallback cb,void* creator_context){
 
     char timer_name[10];
-    my_timer_t* self=poolGet();
+   // my_timer_t* self=poolGet();
 
+   my_timer_t* self=(my_timer_t*) malloc(sizeof(my_timer_t*));
     
     
-    if(self==NULL || cb==NULL)
+    if(self==NULL)
         return NULL;
 
 
