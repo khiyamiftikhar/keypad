@@ -43,6 +43,16 @@ typedef struct {
     interleaved_pwm_interface_t interface;
 }interleaved_pwm_t;   
 
+static struct{
+
+    uint32_t time_period;
+
+
+
+
+}interleaved_pwm_class_data;
+
+
 static bool instance_created=false;
 
 //not used
@@ -299,6 +309,11 @@ static int compute_resolution(uint32_t freq, uint8_t channels, float threshold)
     return res_max;
 }
 
+uint32_t getTimePeriod(){
+
+    return interleaved_pwm_class_data.time_period;
+}
+
 esp_err_t interleavedPWMCreate(
     interleaved_pwm_config_t* config,
     interleaved_pwm_interface_t** out_if)
@@ -401,11 +416,14 @@ esp_err_t interleavedPWMCreate(
     interleaved_pwm->interface.stop             = stop;
     interleaved_pwm->interface.destroy          = destroyMaster;
     interleaved_pwm->interface.changePulseWidth = changeWidth;
+    interleaved_pwm->interface.getTimePeriod=  getTimePeriod;
 
     interleaved_pwm->time_period = time_period;
     interleaved_pwm->dead_time   = dead_time;
 
     instance_created = true;
+
+    interleaved_pwm_class_data.time_period=time_period;
 
     *out_if = &interleaved_pwm->interface;
 
@@ -413,3 +431,5 @@ esp_err_t interleavedPWMCreate(
 
     return ESP_OK;
 }
+
+
