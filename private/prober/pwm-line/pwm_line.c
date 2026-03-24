@@ -108,8 +108,9 @@ static void pwm_attach_gpio(uint8_t gpio_num, ledc_channel_t channel)
 static void pwmStop(pwm_line_interface_t* self){
 
     pwm_line_t* pwm_line=container_of(self,pwm_line_t,interface);
+    ESP_LOGI(TAG,"starting pwm %d",pwm_line->gpio_number);
     ledc_stop(LEDC_MODE,pwm_line->channel_number,1);
-    pwm_detach_gpio(pwm_line->gpio_number);
+    //pwm_detach_gpio(pwm_line->gpio_number);
 
 }
 
@@ -118,12 +119,14 @@ static void pwmStart(pwm_line_interface_t* self){
 
     pwm_line_t* pwm_line=container_of(self,pwm_line_t,interface);
 
+    ESP_LOGI(TAG,"starting pwm %d",pwm_line->gpio_number);
+
     ledc_set_duty_with_hpoint(LEDC_MODE,pwm_line->channel_number,pwm_line->duty,pwm_line->hpoint);
     ledc_update_duty(LEDC_MODE, pwm_line->channel_number);
     uint32_t delay_ms = (pwm_line->time_period * 6) / 1000;
     //ESP_LOGI(TAG,"delay %lu",delay_ms);
     vTaskDelay(pdMS_TO_TICKS(delay_ms));
-    pwm_attach_gpio(pwm_line->gpio_number, pwm_line->channel_number);
+    //pwm_attach_gpio(pwm_line->gpio_number, pwm_line->channel_number);
 
 }
 
@@ -214,7 +217,7 @@ int pwmCreate(pwm_line_t* self,pwm_config_t*  config){
     self->interface.pwmDestroy=pwmDestroy;
     self->interface.pwmChangeWidth=pwmChangeWidth;
 
-    //ESP_LOGI(TAG,"returning from pwm_line");
+    ESP_LOGI(TAG,"returning from pwm_line");
 
     return 0;
     

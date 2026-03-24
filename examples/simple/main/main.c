@@ -18,8 +18,8 @@ void keyPadHandler(key_event_t event, keypad_event_data_t *evt_data)
 void app_main(){
 
 
-    esp_log_level_set("button", ESP_LOG_NONE);
-    esp_log_level_set("keypad", ESP_LOG_NONE);
+    //esp_log_level_set("button", ESP_LOG_NONE);
+    //esp_log_level_set("keypad", ESP_LOG_NONE);
     
     // Keep your app logs visible
     //esp_log_level_set("ketboard_impl", ESP_LOG_NONE);

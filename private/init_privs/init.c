@@ -117,9 +117,15 @@ esp_err_t configKeypadOutput(interleaved_pwm_interface_t** self,uint8_t* output_
     uint32_t pwm_widths[total_outputs];
     uint32_t time_period;
     uint32_t dead_time=500;
-    keypadComputePulseTimings(total_outputs,dead_time,pwm_widths,&time_period);
     
-    config.pulse_widths=pulse_widths;
+    keypadComputePulseTimings(total_outputs,dead_time,pwm_widths,&time_period);
+
+    //Now copy in to the supplued pulse  width pointer so that input mechanism uses this info
+    memcpy(pulse_widths,pwm_widths,sizeof(uint32_t)*total_outputs);
+
+    
+    
+    config.pulse_widths=pwm_widths;
     config.time_period=time_period;
     config.dead_time=dead_time;          //1000 microseconds
 
@@ -200,17 +206,18 @@ esp_err_t configKeypadInput(scanner_interface_t** self,
     
     
         config.gpio_no=input_gpio;
+        config.total_gpio=total_inputs;
         config.total_signals=total_outputs;
         config.tolerance=100;       //microseconds so  0.1 milliseconds
         config.pwm_widths_array=pulse_widths_us;
         config.context=(void*)context; //This will later reterive the keypad_dev_t instance
         config.cb=scannerEventHandler;
         
-        
+        ESP_LOGI(TAG,"total inputs %d",config.total_gpio);
         //Assigning the scanner member of the self
         esp_err_t ret=scannerCreate(&config,self);
 
-        if(ret!=NULL)
+        if(ret!=ESP_OK)
             return ESP_FAIL;
 
         return ESP_OK;

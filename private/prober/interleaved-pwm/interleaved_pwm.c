@@ -126,6 +126,7 @@ static int start(interleaved_pwm_interface_t* self){
     if(self==NULL)    
         return ESP_FAIL;
 
+    ESP_LOGI(TAG,"starting");
     interleaved_pwm_t* prb=container_of(self,interleaved_pwm_t,interface);
 
     pwm_line_t* lines=(pwm_line_t*) prb->lines;

@@ -294,10 +294,16 @@ keypad_dev_t* keypadAlloc(const keypad_config_t *config)
     dev->mode = config->mode;
     dev->cb   = config->cb;
 
+    
     /* --- copy input arrays --- */
     memcpy(dev->keymap,    config->keymap,    rows * cols);
     memcpy(dev->row_gpios, config->row_gpios, rows);
     memcpy(dev->col_gpios, config->col_gpios, cols);
+
+
+    ESP_LOGI(TAG,"total inputs aloc %d",cols);
+
+    ESP_LOGI(TAG,"input gpio 0 %d",dev->col_gpios[0]);
 
     return dev;
 }
@@ -313,6 +319,8 @@ int keypadCreate(keypad_config_t* config, keypad_interface_t** out_if){
         )
         return ESP_ERR_INVALID_ARG;
 
+        
+    ESP_LOGI(TAG,"total inputs before alloc %d",config->total_cols);
     
     keypad_dev_t* self=keypadAlloc(config);
     
@@ -322,12 +330,15 @@ int keypadCreate(keypad_config_t* config, keypad_interface_t** out_if){
     
     
     
-    esp_err_t ret=configKeypadInput(&self->scanner,self->col_gpios,self->total_cols,self->total_rows,self->pwm_width,scannerEventHandler,(void*)self);
-    ESP_LOGI(TAG,"scanner %d",ret);
-    //This is already an instance member so argument is single pointer. No context is required for this since no callback
-    ret=configKeypadOutput(&self->prober,self->row_gpios,self->pwm_width,self->total_rows);
+    
+    //It will config as well as fill the self->pwm_width because it calculates it
+    esp_err_t ret=configKeypadOutput(&self->prober,self->row_gpios,self->pwm_width,self->total_rows);
     ESP_LOGI(TAG,"prober %d",ret);
     
+    ESP_LOGI(TAG,"pw  %lu, %lu, %lu, %lu",self->pwm_width[0],self->pwm_width[1],self->pwm_width[2],self->pwm_width[3]);
+
+    ret=configKeypadInput(&self->scanner,self->col_gpios,self->total_cols,self->total_rows,self->pwm_width,scannerEventHandler,(void*)self);
+    ESP_LOGI(TAG,"scanner %d",ret);
     
     
     ret=configKeypadTimers(self->timers,config->max_simultaneous_keys,(void*)self,timerEventHandler);

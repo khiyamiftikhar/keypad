@@ -99,6 +99,8 @@ static void pulseDecoderEventHandler(pulse_decoder_event_data_t* data,void* cont
     evt_data.line_number=data->line_number;
     evt_data.source_number= data->source_number;
 
+    ESP_LOGI(TAG,"scn evt");
+
     self->cb(&evt_data,self->context);
     //xQueueSend(queue,data,QUEUE_WAIT_TICKS);
 }
@@ -114,6 +116,7 @@ static int startScanning(scanner_interface_t* self){
 
     
     for(uint8_t i=0; i<total_lines ; i++){
+
 
         scanner->pulse_decoder[i]->startMonitoring(scanner->pulse_decoder[i]);
         
@@ -163,7 +166,7 @@ esp_err_t scannerCreate(scanner_config_t* config,scanner_interface_t** scanner){
 
     //Get one  scanner_t element from pool
     
-    
+    ESP_LOGI(TAG,"came to scanner %d",config->total_gpio);        
     self->total_gpio=config->total_gpio; 
     self->gpio_no=config->gpio_no;
     self->total_signals=config->total_signals;
@@ -182,16 +185,17 @@ esp_err_t scannerCreate(scanner_config_t* config,scanner_interface_t** scanner){
     decoder_config.total_signals=config->total_signals;
     decoder_config.pulse_widths_us=config->pwm_widths_array;
     
+    ESP_LOGI(TAG,"pw  %lu, %lu, %lu, %lu",decoder_config.pulse_widths_us[0],decoder_config.pulse_widths_us[1],decoder_config.pulse_widths_us[2],decoder_config.pulse_widths_us[3]);
     for(uint8_t i=0;i<config->total_gpio;i++){
         
-        
+        ESP_LOGI(TAG,"capture gpio num %d",config->gpio_no[i]);        
         decoder_config.gpio_num = config->gpio_no[i];
         decoder_config.line_num = i;
         
         esp_err_t ret=pulseDecoderCreate(&decoder_config,&self->pulse_decoder[i]);
         
         if(ret!=ESP_OK){
-            for(uint8_t j=i-1; j>=0;j--){
+            for(int j=i-1; j>=0;j--){
                 self->pulse_decoder[i]->destroy(self->pulse_decoder[i]);
                
             }
