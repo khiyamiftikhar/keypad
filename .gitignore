@@ -1,5 +1,6 @@
 # Ignore the entire build folder
 build/
+build-*/
 dependencies.lock
 # Ignore the .vscode folder
 .vscode/
