@@ -23,7 +23,7 @@ esp_err_t configKeypadButtons(button_interface_t** buttons,                     
 
 
 esp_err_t configKeypadOutput(interleaved_pwm_interface_t** self,uint8_t* output_gpio,uint32_t* pulse_widths,uint8_t total_outputs);
-esp_err_t configKeypadTimers(timer_interface_t **timers,  uint8_t total_timers,  void *context,buttonCallBack handler);
+esp_err_t configKeypadTimers(timer_interface_t **timers,  uint8_t total_timers,  void *context,timerCallback handler);
 
 esp_err_t configTimerPool(pool_alloc_interface_t** pool ,timer_interface_t** timers,uint8_t total_objects);
 
@@ -33,5 +33,5 @@ esp_err_t configTimerPool(pool_alloc_interface_t** pool ,timer_interface_t** tim
 /// @param total_inputs Total gpios
 /// @param total_outputs Total outputs of matrix keypad, each with different pwm signal and thus different signal
 /// @return 
-esp_err_t configKeypadInput(scanner_interface_t** self,uint8_t* input_gpio,uint8_t total_inputs,uint8_t total_outputs,uint32_t* pulse_widths_us,scannerCallBack handler,void* context);
+esp_err_t configKeypadInput(scanner_interface_t** self,uint8_t* input_gpio,uint8_t total_inputs,uint8_t total_outputs,uint32_t* pulse_widths_us,scannerCallback handler,void* context);
 #endif

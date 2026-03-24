@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include "esp_log.h"
+#include "esp_err.h"
 #include "my_timer.h"
 #include "keypad_button.h"
 
@@ -364,6 +365,7 @@ int buttonDestroy(struct button_interface* self){
     }
 
     free(btn);
+    return ESP_OK;
 
 }
 

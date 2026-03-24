@@ -132,7 +132,8 @@ esp_err_t configKeypadOutput(interleaved_pwm_interface_t** self,uint8_t* output_
 
 }
 
-esp_err_t configKeypadTimers(timer_interface_t **timers,  uint8_t total_timers,  void *context,buttonCallBack timerEventHandler){
+
+esp_err_t configKeypadTimers(timer_interface_t **timers,  uint8_t total_timers,  void *context,timerCallback timerEventHandler){
     char name[10];
 
     for (uint8_t i = 0; i < total_timers; i++) {
@@ -188,7 +189,7 @@ esp_err_t configKeypadInput(scanner_interface_t** self,
                             uint8_t total_inputs,   //Total loop interations
                             uint8_t total_outputs,  //Each line will detect this many pulses
                             uint32_t* pulse_widths_us,
-                            scannerCallBack scannerEventHandler,
+                            scannerCallback scannerEventHandler,
                             void* context) //The keypad object, because multiple keppad can be crrated
 {
 

@@ -30,17 +30,23 @@ void app_main(){
     uint8_t col_gpios[]={18,19,22,23};
 
     //Create and fill config struct
-    keypad_config_t config={    .cb=keyPadHandler,      //Assign Callback
-                                .col_gpios=col_gpios,
-                                .row_gpios=row_gpios,
-                                .total_cols=4,
-                                .total_rows=4,
-                                .keymap={{'1','2','3','A'},{'4','5','6','B'},{'7','8','9','C'},{'*','0','#','D'}}
-                            };
-
+keypad_config_t config = {
+    .cb         = keyPadHandler,
+    .col_gpios  = col_gpios,
+    .row_gpios  = row_gpios,
+    .total_cols = 4,
+    .total_rows = 4,
+    .keymap     = (uint8_t[]){
+                    '1','2','3','A',
+                    '4','5','6','B',
+                    '7','8','9','C',
+                    '*','0','#','D'
+                  }
+};
         
     //Instantiate a keypad Object
-    keypad_interface_t* keypad = keypadCreate(&config);
+    keypad_interface_t* keypad;
+    int ret = keypadCreate(&config,&keypad);
    
     
 }

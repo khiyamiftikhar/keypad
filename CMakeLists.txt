@@ -8,11 +8,13 @@ idf_component_register(
     INCLUDE_DIRS include
     PRIV_INCLUDE_DIRS
         private/init_privs/
-        private/keypad-button/keypad-button
+        private/keypad-button/keypad-button/
         private/pool_allocator/pool_alloc_interface/
         private/pool_allocator/pool_alloc_queue_impl/
         private/prober/interleaved-pwm/
+        private/prober/pwm-line/
         private/scanner/pulse-decoder/
+        private/scanner/scan-manager/
         private/timer/timer_interface/
         private/timer/timer_impl/
 

@@ -49,7 +49,7 @@ struct scanner{
     uint32_t tolerance;
     //QueueHandle_t queue;                    //Separate Queue for each capture unit bcz ISR queue API doesn't wait and fails immediately
     //TaskHandle_t capture_task;              //Corresponding task
-    scannerCallBack cb;
+    scannerCallback cb;
     scanner_interface_t interface;
     void* context;
     pulse_decoder_interface_t* pulse_decoder[];   //Flexible array, put at end as required
@@ -159,7 +159,7 @@ esp_err_t scannerCreate(scanner_config_t* config,scanner_interface_t** scanner){
 
     
     if(self==NULL)
-        return NULL;
+        return ESP_FAIL;
 
     //Get one  scanner_t element from pool
     

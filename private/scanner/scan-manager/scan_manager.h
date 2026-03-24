@@ -22,7 +22,7 @@ typedef struct scanner_event_data{
 
 
 
-void (*scannerCallback)(scanner_event_data_t* event_data,void* context);
+typedef void (*scannerCallback)(scanner_event_data_t* event_data,void* context);
 
 typedef struct scanner_interface{
    // void (*addCaptureLine)(scanner_interface_t* self,pwm_capture_t* line);
@@ -41,9 +41,6 @@ typedef struct scanner_interface{
 
 
 
-//This is defined separately just so that the scannerCreate callback parameter is simple
-//Scanner object creation results in a pointer
-typedef void (*scannerCallBack)(scanner_event_data_t* event_data,void* context);
 
 
 
@@ -56,7 +53,7 @@ typedef struct scanner_config{
     uint8_t total_signals;
     uint32_t* pwm_widths_array;
     uint32_t tolerance;
-    scannerCallBack cb;
+    scannerCallback cb;
     void* context;
 }scanner_config_t;
 
@@ -67,7 +64,7 @@ typedef struct scanner_config{
 
 //not used bcz struct shard in header
 //size_t scannerGetSize(uint8_t total_gpio, uint8_t total_signals);
-int scannerCreate(scanner_config_t* config,scanner_interface_t** scanner){
+int scannerCreate(scanner_config_t* config,scanner_interface_t** scanner);
 
 
 #endif

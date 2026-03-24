@@ -1,12 +1,8 @@
 
 #include <stdint.h>
 #include <string.h>
-
 #include <esp_log.h>
-
-
 #include "matrix_keypad_nkro.h"
-
 #include "my_timer.h"
 #include "pool_queue.h"
 #include "freertos/FreeRTOS.h"
@@ -111,76 +107,7 @@ typedef struct keypad_dev {
 } keypad_dev_t;
 
 
-//Pool of th objects, so that to have static allocation
-/*
-typedef struct{
-    keypad_dev_t array[MAX_KEYPADS];
-    uint8_t allocated_count;
-}keypad_pool_t;
-*/
-
-
-
-//static keypad_pool_t pool;
-
-
-/*
-
-    
-    my_timer_t* timer=&self->timer;
-    
-    timerCreate(timer,"shared",NULL);
-
-    QueueHandle_t queue_handle = self->queue_handle;
-
-
-    
-
-    queue_handle= xQueueCreateStatic(QUEUE_LENGTH,sizeof(queue_data_t));
-    
-
-}
-
-*/
-
-/*
-/// @brief Get one element(i.e a pool object out of pool array) of pool, and increment the count. Not thread safe
-/// @return 
-static keypad_dev_t* poolGet(){
-    
-    if(pool.allocated_count==MAX_KEYPADS)
-        return NULL;
-    
-    keypad_dev_t* self=&pool.array[pool.allocated_count];
-    pool.allocated_count++;
-    return self;
-}
-
-//So it assumes that return is in the same order as get, so very simplisitic, also  not thread safe
-static void poolReturn(){
-
-    pool.allocated_count--;
-
-}
-*/
-
-
-
-
-
-static void copyUserParameters(keypad_dev_t* self,keypad_config_t* config){
-
-    memcpy(self->col_gpios,config->col_gpios,sizeof(uint8_t)*config->total_cols);
-    self->total_cols=config->total_cols;
-    memcpy(self->row_gpios,config->row_gpios,sizeof(uint8_t)*config->total_rows);
-    self->total_rows=config->total_rows;
-    memcpy(self->keymap,config->keymap,sizeof(config->keymap));
-    self->cb=config->cb;
-
-
-}
-
-static void scannerEventHandler(pulse_decoder_event_data_t* event_data,void* context){
+static void scannerEventHandler(scanner_event_data_t* event_data,void* context){
 
     //Get the keypad_dev_t instance
     keypad_dev_t* self=(keypad_dev_t*)context;
@@ -300,6 +227,7 @@ static void buttonEventHandler(uint8_t button_index,button_event_data_t* evt,voi
 }
 
 
+#define ALIGN_UP(sz, a)  (((sz) + (a) - 1) & ~((a) - 1))
 keypad_dev_t* keypadAlloc(const keypad_config_t *config)
 {
     /* --- validate --- */
@@ -394,12 +322,14 @@ int keypadCreate(keypad_config_t* config, keypad_interface_t** out_if){
     
     
     
-    esp_err_t ret=configKeypadInput(self->scanner,self->col_gpios,self->total_cols,self->total_rows,self->pwm_width,scannerEventHandler,(void*)self);
+    esp_err_t ret=configKeypadInput(&self->scanner,self->col_gpios,self->total_cols,self->total_rows,self->pwm_width,scannerEventHandler,(void*)self);
     ESP_LOGI(TAG,"scanner %d",ret);
     //This is already an instance member so argument is single pointer. No context is required for this since no callback
     ret=configKeypadOutput(&self->prober,self->row_gpios,self->pwm_width,self->total_rows);
     ESP_LOGI(TAG,"prober %d",ret);
-
+    
+    
+    
     ret=configKeypadTimers(self->timers,config->max_simultaneous_keys,(void*)self,timerEventHandler);
     ESP_LOGI(TAG,"timer %d",ret);
     ret=configTimerPool(&self->timer_pool,self->timers,config->max_simultaneous_keys);
@@ -417,9 +347,10 @@ int keypadCreate(keypad_config_t* config, keypad_interface_t** out_if){
     //Start scannning
     self->scanner->startScanning(self->scanner);
     //start probing
+    self->prober->start(self->prober);
     
-    self->prober.start(&self->prober);
-    return &self->interface;
+    *out_if=&self->interface;
+    return ESP_OK;
         
 }
 

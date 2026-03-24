@@ -1,5 +1,5 @@
-#ifndef PROBE_MANAGER_H
-#define PROBE_MANAGER_H
+#ifndef INTERLEAVED_PWM_H
+#define INTERLEAVED_PWM_H
 #include <stdint.h>
 //#include "pwm_line.h"
 
@@ -147,8 +147,6 @@ typedef struct interleaved_pwm_interface{
 
 
 //It needs to be changed. This  whole struct must be private and only interface must be returned
-
-
 
 esp_err_t interleavedPWMCreate(interleaved_pwm_config_t* config,interleaved_pwm_interface_t** out_if);
 
