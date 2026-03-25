@@ -135,7 +135,7 @@ static int match_pulse_id(const pulse_decoder_t *obj, uint32_t received_us)
                         ? received_us - obj->pulse_widths[i]
                         : obj->pulse_widths[i] - received_us;
 
-        ESP_LOGI(TAG,"%lu    %lu",received_us,obj->pulse_widths[i]);
+        //ESP_LOGI(TAG,"%lu    %lu",received_us,obj->pulse_widths[i]);
         if (diff <= obj->tolerance)
             return (int)i;
     }
@@ -171,7 +171,8 @@ static void task_processCaptureQueue(void *args)
             pulse_decoder_event_data_t event = {
                 .line_number   = obj->line_num,
                 .source_number = (uint8_t)id,
-                .gpio_number=obj->gpio_num
+                .gpio_number=obj->gpio_num,
+                .pulse_width=pulse_us
             };
             cd->cb(&event, cd->context);
         }
