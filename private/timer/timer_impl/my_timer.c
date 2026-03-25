@@ -234,7 +234,7 @@ timer_interface_t* timerCreate(char* name,timerCallback cb,void* creator_context
     char timer_name[10];
    // my_timer_t* self=poolGet();
 
-   my_timer_t* self=(my_timer_t*) malloc(sizeof(my_timer_t*));
+   my_timer_t* self=(my_timer_t*) malloc(sizeof(my_timer_t));
     
     
     if(self==NULL)
