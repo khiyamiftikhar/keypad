@@ -146,7 +146,7 @@ static int buttonStateUpdateEventHandler(button_interface_t* self,button_state_u
         case BUTTON_STATE_IDLE:
                                 if(evt==BUTTON_STATE_EVENT_PRESSED){
                                     next_button_state=BUTTON_STATE_PROBABLE_PRESS;
-                                    ESP_LOGI(TAG,"t interval %"PRIu32,btn->time_period);
+                                    //ESP_LOGI(TAG,"t interval %"PRIu32,btn->time_period);
                                     timer->timerSetInterval(timer,btn->time_period);
                                     timer->timerStart(timer,TIMER_ONESHOT);
                                 }
@@ -212,7 +212,7 @@ static int buttonStateUpdateEventHandler(button_interface_t* self,button_state_u
                                             *previous_time=timer->timerGetCurrentTime();
 
                                             evt_data.event=BUTTON_EVENT_PRESSED;
-                                            ESP_LOGI(TAG,"button index %d, val %d",btn->button_index,evt_data.button_id);
+                                      //      ESP_LOGI(TAG,"button index %d, val %d",btn->button_index,evt_data.button_id);
                                             btn->cb(btn->button_index,&evt_data,btn->context);
                                         }
                                         else
@@ -324,7 +324,7 @@ static int buttonStateUpdateEventHandler(button_interface_t* self,button_state_u
 
     *state=next_button_state;
     btn->debug_previous_time=current_time;
-    ESP_LOGI(TAG,"bt index %d st %d",btn->button_index,*state);
+    //ESP_LOGI(TAG,"bt index %d st %d",btn->button_index,*state);
     return 0;
 }
 
