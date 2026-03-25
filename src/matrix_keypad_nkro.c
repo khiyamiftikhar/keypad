@@ -309,8 +309,26 @@ keypad_dev_t* keypadAlloc(const keypad_config_t *config)
 }
 
 
+static void keypadControlLogs(){
+    esp_log_level_set("button", ESP_LOG_NONE);
+    esp_log_level_set("keypad", ESP_LOG_NONE);
+    
+    // Keep your app logs visible
+    esp_log_level_set("keypad", ESP_LOG_NONE);
+    esp_log_level_set("pulse-decoder", ESP_LOG_NONE);
+    esp_log_level_set("pulse-decoder", ESP_LOG_NONE);
+    esp_log_level_set("pulse-decoder", ESP_LOG_NONE);
+    esp_log_level_set("queue pool", ESP_LOG_NONE);
+    
+    
+    
+}
+
 int keypadCreate(keypad_config_t* config, keypad_interface_t** out_if){
 
+
+
+    keypadControlLogs();
     uint8_t max_simultaneous_keys=(config->max_simultaneous_keys);
     uint8_t total_buttons=((config->total_cols)*(config->total_rows));
 
@@ -342,10 +360,11 @@ int keypadCreate(keypad_config_t* config, keypad_interface_t** out_if){
     
     
     ret=configKeypadTimers(self->timers,config->max_simultaneous_keys,(void*)self,timerEventHandler);
+
     ESP_LOGI(TAG,"timer %d",ret);
     ret=configTimerPool(&self->timer_pool,self->timers,config->max_simultaneous_keys);
     ESP_LOGI(TAG,"timer pool %d",ret);
-    ret=configKeypadButtons(self->button,self->keymap,total_buttons,(void*)self,self->prober->getTimePeriod(),buttonEventHandler,(void*)self);
+    ret=configKeypadButtons(self->button,self->keymap,total_buttons,self->timer_pool,self->prober->getTimePeriod(),buttonEventHandler,(void*)self);
     ESP_LOGI(TAG,"button %d",ret);
 
     self->mp_event_queue.handle=xQueueCreateStatic(MAX_INTERNAL_EVENT_QUEUE_ELEMENTS,sizeof(mp_event_data_t),self->mp_event_queue.buff,&self->mp_event_queue.queue_meta_data);
