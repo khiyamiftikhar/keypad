@@ -99,7 +99,7 @@ static void pulseDecoderEventHandler(pulse_decoder_event_data_t* data,void* cont
     evt_data.line_number=data->line_number;
     evt_data.source_number= data->source_number;
 
-    ESP_LOGI(TAG,"scn evt");
+    //ESP_LOGI(TAG,"scn evt");
 
     self->cb(&evt_data,self->context);
     //xQueueSend(queue,data,QUEUE_WAIT_TICKS);
@@ -184,6 +184,9 @@ esp_err_t scannerCreate(scanner_config_t* config,scanner_interface_t** scanner){
     decoder_config.tolerance_us=config->tolerance;
     decoder_config.total_signals=config->total_signals;
     decoder_config.pulse_widths_us=config->pwm_widths_array;
+    //Intermediate callback here because it is the mediator, the uppoer layer
+    //does not have direct access to the pulse-decoder
+    decoder_config.cb=pulseDecoderEventHandler;
     
     ESP_LOGI(TAG,"pw  %lu, %lu, %lu, %lu",decoder_config.pulse_widths_us[0],decoder_config.pulse_widths_us[1],decoder_config.pulse_widths_us[2],decoder_config.pulse_widths_us[3]);
     for(uint8_t i=0;i<config->total_gpio;i++){
