@@ -135,6 +135,7 @@ static int match_pulse_id(const pulse_decoder_t *obj, uint32_t received_us)
                         ? received_us - obj->pulse_widths[i]
                         : obj->pulse_widths[i] - received_us;
 
+        ESP_LOGI(TAG,"%lu    %lu",received_us,obj->pulse_widths[i]);
         if (diff <= obj->tolerance)
             return (int)i;
     }
@@ -168,8 +169,9 @@ static void task_processCaptureQueue(void *args)
         int id = match_pulse_id(obj, pulse_us);
         if (id >= 0 && cd->cb) {
             pulse_decoder_event_data_t event = {
-                .line_number   = obj->gpio_num,
+                .line_number   = obj->line_num,
                 .source_number = (uint8_t)id,
+                .gpio_number=obj->gpio_num
             };
             cd->cb(&event, cd->context);
         }
@@ -277,12 +279,12 @@ static int destroyDecoder(struct pulse_decoder_interface *self)
 
 static esp_err_t pulseDecoderClassDataInit(void)
 {
-    ESP_LOGI(TAG, "pulse decoder  3.5");
+    
     if (g_class.object_count >= MAX_CHANNELS) {
         ESP_LOGE(TAG, "Maximum capture channels (%d) already in use", MAX_CHANNELS);
         return ERR_CAPTURE_CAP_UNIT_EXCEED;
     }
-    ESP_LOGI(TAG, "pulse decoder  3.6");
+    
 
     /* Create queue + task once on first call */
     if (g_class.queue == NULL) {
@@ -292,7 +294,7 @@ static esp_err_t pulseDecoderClassDataInit(void)
             return ERR_CAPTURE_MEM_ALLOC;
         }
 
-        ESP_LOGI(TAG, "pulse decoder  3");
+        
         if (xTaskCreate(task_processCaptureQueue,
                         "captureTask", 4096,
                         &g_class, 5,
@@ -304,12 +306,12 @@ static esp_err_t pulseDecoderClassDataInit(void)
         }
     }
 
-    ESP_LOGI(TAG, "pulse decoder  4");
+    
     /* Create a new timer whenever we step into a new group (every 3 objects) */
     if (g_class.object_count % MAX_CHANNELS_PER_UNIT == 0) {
         uint8_t group = g_class.object_count / MAX_CHANNELS_PER_UNIT;
 
-        ESP_LOGI(TAG, "pulse decoder  4.5  group%d",group);
+        
         mcpwm_capture_timer_config_t conf = {
             .clk_src       = MCPWM_CAPTURE_CLK_SRC_DEFAULT,
             .group_id      = (int)group,
@@ -323,17 +325,17 @@ static esp_err_t pulseDecoderClassDataInit(void)
             .resolution_hz = 1000000,
         };
 
-        ESP_LOGI(TAG, "pulse decoder  5");
+        
         esp_err_t ret=0;
         ret = mcpwm_new_capture_timer(&conf, &g_class.timer[group].cap_timer);
-        ESP_LOGI(TAG, "pulse decoder  5.5");
+        
         if (ret != ESP_OK) {
             ESP_LOGE(TAG, "Failed to create capture timer for group %d: %s",
                      group, esp_err_to_name(ret));
             return ret;
         }
 
-        ESP_LOGI(TAG, "pulse decoder  6");
+        
         /*
          * Query the resolution the hardware is ACTUALLY running at.
          * This is the only portable way to get the right value —
@@ -349,7 +351,7 @@ static esp_err_t pulseDecoderClassDataInit(void)
             ESP_LOGW(TAG, "get_resolution failed, falling back to APB (%lu Hz)",
                      (unsigned long)actual_hz);
         }
-        ESP_LOGI(TAG, "pulse decoder  7");
+        
         g_class.timer[group].cap_conf      = conf;
         g_class.timer[group].resolution_hz = actual_hz;
 
@@ -357,7 +359,7 @@ static esp_err_t pulseDecoderClassDataInit(void)
                  group, (unsigned long)actual_hz);
     }
 
-    ESP_LOGI(TAG, "pulse decoder  8");
+    
 
     g_class.object_count++;
     return ESP_OK;
@@ -371,13 +373,13 @@ esp_err_t pulseDecoderCreate(pulse_decoder_config_t    *config,
     if (!config || !out_if || !config->pulse_widths_us || config->total_signals == 0)
         return ESP_ERR_INVALID_ARG;
 
-    ESP_LOGI(TAG, "pulse decoder  0");
+    
 
     esp_err_t ret = pulseDecoderClassDataInit();
     if (ret != ESP_OK)
         return ret;
 
-    ESP_LOGI(TAG, "pulse decoder  1");
+
     if (config->cb)
         g_class.cb = config->cb;
     if (config->context)
@@ -386,13 +388,14 @@ esp_err_t pulseDecoderCreate(pulse_decoder_config_t    *config,
     pulse_decoder_t *obj =
         calloc(1, sizeof(pulse_decoder_t) +
                   config->total_signals * sizeof(uint32_t));
-    ESP_LOGI(TAG, "pulse decoder  2");
+    
     if (!obj) {
         g_class.object_count--;
         return ESP_ERR_NO_MEM;
     }
 
     obj->gpio_num      = config->gpio_num;
+    obj->line_num       = config->line_num;
     obj->total_signals = config->total_signals;
     obj->tolerance     = config->tolerance_us;
 
