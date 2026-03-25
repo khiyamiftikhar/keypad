@@ -31,6 +31,7 @@ void app_main(){
 
     //Create and fill config struct
 keypad_config_t config = {
+    .max_simultaneous_keys=3,
     .cb         = keyPadHandler,
     .col_gpios  = col_gpios,
     .row_gpios  = row_gpios,
