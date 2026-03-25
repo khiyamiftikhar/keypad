@@ -96,7 +96,7 @@ typedef struct keypad_dev {
     uint32_t* pwm_width;        //[total rows]
 
     /* --- fixed-size members (unchanged) --- */
-    key_press_mode_t         mode;
+    bool                     auto_repeat_disable;
     keypad_interface_t       interface;
     pool_alloc_interface_t  *timer_pool;
     queue_mp_event_handle_t  mp_event_queue;
@@ -217,6 +217,11 @@ static void buttonEventHandler(uint8_t button_index,button_event_data_t* evt,voi
 
     keypad_event_data_t keypad_event_data={0};
 
+    if(evt->event==BUTTON_EVENT_PRESSED_REPEAT){
+        if(self->auto_repeat_disable==true)
+            return;
+    }
+
     ESP_LOGI(TAG,"id %d, val %d",button_index,evt->button_id);
     keypad_event_data.event=evt->event;
     keypad_event_data.key_id=evt->button_id;    
@@ -291,8 +296,8 @@ keypad_dev_t* keypadAlloc(const keypad_config_t *config)
     dev->total_cols            = cols;
     dev->max_simultaneous_keys = max_sim_keys;
     dev->max_buttons           = total_buttons;
-    dev->mode = config->mode;
     dev->cb   = config->cb;
+    dev->auto_repeat_disable=config->auto_repeat_disable;
 
     
     /* --- copy input arrays --- */
@@ -320,22 +325,66 @@ static void keypadControlLogs(){
     esp_log_level_set("pulse-decoder", ESP_LOG_NONE);
     esp_log_level_set("queue pool", ESP_LOG_NONE);
     
-    
-    
+}
+
+
+static esp_err_t keypadValidateConfig(const keypad_config_t *cfg)
+{
+    // 1. Check config pointer
+    if (cfg == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    // 2. Basic pointer checks
+    if (cfg->keymap == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (cfg->row_gpios == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (cfg->col_gpios == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (cfg->cb == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    // 3. Size checks
+    if (cfg->total_rows == 0 || cfg->total_cols == 0) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    // 4. Prevent overflow (important!)
+    uint16_t total_keys = (uint16_t)cfg->total_rows * (uint16_t)cfg->total_cols;
+
+    if (total_keys == 0) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    // 5. Logical constraints
+    if (cfg->max_simultaneous_keys == 0 ||
+        cfg->max_simultaneous_keys > total_keys) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+
+    return ESP_OK;
 }
 
 int keypadCreate(keypad_config_t* config, keypad_interface_t** out_if){
 
 
+    if(keypadValidateConfig(config)!=ESP_OK)
+        return ESP_ERR_INVALID_ARG;
 
     keypadControlLogs();
     uint8_t max_simultaneous_keys=(config->max_simultaneous_keys);
     uint8_t total_buttons=((config->total_cols)*(config->total_rows));
 
-    if(config==NULL || 
-       (max_simultaneous_keys>total_buttons)
-        )
-        return ESP_ERR_INVALID_ARG;
+    
 
         
     ESP_LOGI(TAG,"total inputs before alloc %d",config->total_cols);

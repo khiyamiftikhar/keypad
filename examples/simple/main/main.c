@@ -31,6 +31,7 @@ void app_main(){
 
     //Create and fill config struct
 keypad_config_t config = {
+    .auto_repeat_disable=true,  //Will not generate repeat events (when button is kept pressed beyond long press)
     .max_simultaneous_keys=3,
     .cb         = keyPadHandler,
     .col_gpios  = col_gpios,

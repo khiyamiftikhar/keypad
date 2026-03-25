@@ -52,7 +52,7 @@ typedef struct keypad_interface{
 
 
 typedef struct {
-    uint8_t         mode;
+    bool            auto_repeat_disable;    //To disable the periodic events generated when kept pressed
     uint8_t        *keymap;      // flat [total_rows * total_cols] — caller owns this
     uint8_t        *row_gpios;   // [total_rows]
     uint8_t         total_rows;
