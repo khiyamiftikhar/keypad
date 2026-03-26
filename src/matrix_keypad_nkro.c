@@ -119,7 +119,7 @@ static void scannerEventHandler(scanner_event_data_t* event_data,void* context){
     uint8_t col=event_data->line_number;
     uint8_t total_cols=self->total_cols;
     uint8_t button_index=((row*total_cols)+col);
-    ESP_LOGI(TAG,"row %d, col %d, button index %d",row,col,button_index);
+    ESP_LOGI(TAG,"row %d, col %d, button index %d, width %lu",row,col,button_index,event_data->pulse_width);
     button_interface_t* button=self->button[button_index];
 
     mp_event_data_t mp_event_data;
@@ -137,7 +137,7 @@ static void scannerEventHandler(scanner_event_data_t* event_data,void* context){
 static void timerEventHandler(timer_event_t event,void* creator_context,void* user_context){
     
     //keypad_button_t* self=(keypad_dev_t*) context;
-    ESP_LOGI(TAG,"t hand");
+    //ESP_LOGI(TAG,"t hand");
     keypad_dev_t* keypad=(keypad_dev_t*) creator_context;
     mp_event_data_t event_data;
     button_interface_t* button=(button_interface_t*)user_context;
@@ -164,7 +164,7 @@ static void task_mp_queue(void* args){
     while(1){
         if(xQueueReceive(queue_handle,&mp_event_data,portMAX_DELAY)==pdTRUE){
 
-            //ESP_LOGI(TAG,"problem here %d",mp_event_data.event);
+            //ESP_LOGI(TAG,"button id %d",mp_event_dat;
             button=mp_event_data.button;
             if(button==NULL || button->buttonEventInform==NULL)
                 continue;
@@ -175,7 +175,8 @@ static void task_mp_queue(void* args){
                 case MP_EVENT_TIMER_ELAPSED:    button->buttonEventInform(button,BUTTON_STATE_EVENT_TIMER_ELAPSED); break;
 
                 //This is not useful or well though out. just written for the sake of writing a default statement
-                default:    button->buttonEventInform(button,2); break;
+                default:    //button->buttonEventInform(button,2);
+                 break;
 
             }
             
@@ -195,7 +196,7 @@ static void task_user_queue(void* args){
 
 
         if(xQueueReceive(queue_handle,&key_event_data,portMAX_DELAY)==pdTRUE){
-            ESP_LOGI(TAG,"sending key id %d",key_event_data.key_id);
+            //ESP_LOGI(TAG,"sending key id %d",key_event_data.key_id);
             self->cb(key_event_data.event,&key_event_data);
             
         }
@@ -316,13 +317,13 @@ keypad_dev_t* keypadAlloc(const keypad_config_t *config)
 
 static void keypadControlLogs(){
     esp_log_level_set("button", ESP_LOG_NONE);
-    esp_log_level_set("keypad", ESP_LOG_NONE);
+    
     
     // Keep your app logs visible
     esp_log_level_set("keypad", ESP_LOG_NONE);
     esp_log_level_set("pulse-decoder", ESP_LOG_NONE);
-    esp_log_level_set("pulse-decoder", ESP_LOG_NONE);
-    esp_log_level_set("pulse-decoder", ESP_LOG_NONE);
+    esp_log_level_set("scan manager", ESP_LOG_NONE);
+    
     esp_log_level_set("queue pool", ESP_LOG_NONE);
     
 }
