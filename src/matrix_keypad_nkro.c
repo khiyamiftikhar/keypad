@@ -119,7 +119,7 @@ static void scannerEventHandler(scanner_event_data_t* event_data,void* context){
     uint8_t col=event_data->line_number;
     uint8_t total_cols=self->total_cols;
     uint8_t button_index=((row*total_cols)+col);
-    ESP_LOGI(TAG,"row %d, col %d, button index %d, width %lu",row,col,button_index,event_data->pulse_width);
+    ESP_LOGI(TAG,"row %d, col %d, button index %d",row,col,button_index);
     button_interface_t* button=self->button[button_index];
 
     mp_event_data_t mp_event_data;
