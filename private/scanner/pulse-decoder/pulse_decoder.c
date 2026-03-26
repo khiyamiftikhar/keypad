@@ -437,6 +437,8 @@ esp_err_t pulseDecoderCreate(pulse_decoder_config_t    *config,
         .prescale       = 1,
         .flags.neg_edge = true,
         .flags.pos_edge = true,
+        .flags.pull_down=true,
+        .flags.pull_up=false
     };
 
     ret = mcpwm_new_capture_channel(obj->cap_timer, &ch_conf, &obj->cap_chan);
