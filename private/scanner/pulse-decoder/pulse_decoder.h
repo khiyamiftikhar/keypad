@@ -20,7 +20,7 @@ typedef struct pulse_decoder_event_data{
     uint8_t source_number;          //based on pwm width array
     uint8_t line_number;            //1 , 2 3 instead of gpio number 222,34 etc
     uint8_t gpio_number;
-    uint32_t pulse_width;           //For debugging
+    
 
 }pulse_decoder_event_data_t;
 

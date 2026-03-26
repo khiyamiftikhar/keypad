@@ -172,7 +172,7 @@ static void task_processCaptureQueue(void *args)
                 .line_number   = obj->line_num,
                 .source_number = (uint8_t)id,
                 .gpio_number=obj->gpio_num,
-                .pulse_width=pulse_us
+                
             };
             cd->cb(&event, cd->context);
         }
