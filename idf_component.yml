@@ -1,5 +1,5 @@
 version: "0.1.0"
-description: description: PWM-driven matrix keypad driver for ESP-IDF using row pulse-width encoding and MCPWM capture for simultaneous multi-key detection. Supports multiple keys per column with hardware-assisted decoding.
+description: description: "PWM-driven matrix keypad driver for ESP-IDF using row pulse-width encoding and MCPWM capture for simultaneous multi-key detection. Supports multiple keys per column with hardware-assisted decoding."
 url: "https://github.com/embedblocks/matrix-keypad-pwm
 license: "MIT"
 
