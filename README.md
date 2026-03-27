@@ -29,14 +29,14 @@ Instead of scanning rows one at a time, each row continuously drives a unique PW
 ### Using ESP-IDF Component Manager (Recommended)
 
 ```bash
-idf.py add-dependency "embedblocks/matrix-keypad-pwm^1.0.0"
+idf.py add-dependency "embedblocks/matrix-keypad-pwm^0.1.0"
 ```
 
 Or in your project's `idf_component.yml`:
 
 ```yaml
 dependencies:
-  embedblocks/matrix-keypad-pwm: "^1.0.0"
+  embedblocks/matrix-keypad-pwm: "^0.1.0"
 ```
 
 ---
