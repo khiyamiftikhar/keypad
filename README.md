@@ -131,7 +131,6 @@ Row4 GPIO (3200µs PWM) ──>|──┘  [btn]──┘  [btn]──┘  [btn]
                                   |          |          |          |
                                Col1 GPIO  Col2 GPIO  Col3 GPIO  Col4 GPIO
                               (Capture)  (Capture)  (Capture)  (Capture)
-                              + 10k pd   + 10k pd   + 10k pd   + 10k pd
 ```
 
 ---
