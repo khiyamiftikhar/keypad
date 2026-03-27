@@ -13,4 +13,5 @@ files:
       - "docs/**/*"
       - "dist/**/*"
       - "*.docx"
-      - "README.txt"      
+      - "README.txt"
+      - ".devcontainer"     
