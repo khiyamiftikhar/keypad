@@ -5,7 +5,6 @@
 #include <stdint.h>
 #include <string.h>
 #include <esp_log.h>
-#include "matrix_keypad_nkro.h"
 #include "my_timer.h"
 #include "pool_queue.h"
 #include "interleaved_pwm.h"

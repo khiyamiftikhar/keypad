@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include "unity.h"
 #include "esp_log.h"
-#include "matrix_keypad_nkro.h"
+#include "matrix_keypad_pwm.h"
 
 static const char *TAG = "test_keypad";
 
