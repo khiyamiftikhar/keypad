@@ -1,3 +1,3 @@
 idf_component_register(SRCS "main_test.c"
                     INCLUDE_DIRS "."
-                    REQUIRES unity matrix-keypad-nkro)
+                    REQUIRES unity matrix-keypad-pwm)

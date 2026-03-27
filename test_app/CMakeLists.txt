@@ -12,7 +12,7 @@ set(EXTRA_COMPONENT_DIRS "../" "../test"  #"$ENV{IDF_PATH}/tools/unit-test-app/c
 # - when using idf.py: idf.py -T xxxxx build
 #
 #
-set(TEST_COMPONENTS "matrix-keypad-nkro")
+set(TEST_COMPONENTS "matrix-keypad-pwm")
 #set(CONFIG_UNIT_TESTING 0)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
