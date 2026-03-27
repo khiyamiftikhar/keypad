@@ -103,6 +103,7 @@ typedef struct keypad_dev {
     keypadCallback           cb;
 } keypad_dev_t;
 
+static bool keypad_init_done=false;
 
 static void scannerEventHandler(scanner_event_data_t* event_data,void* context){
 
@@ -424,6 +425,10 @@ static esp_err_t keypadValidateConfig(const keypad_config_t *cfg)
 int keypadCreate(keypad_config_t* config, keypad_interface_t** out_if){
 
 
+    if(keypad_init_done == true){
+        ESP_LOGI(TAG,"Already init, only one instance supported");
+        return ESP_FAIL;
+    }
     if(keypadValidateConfig(config)!=ESP_OK)
         return ESP_ERR_INVALID_ARG;
 
@@ -478,30 +483,14 @@ int keypadCreate(keypad_config_t* config, keypad_interface_t** out_if){
     self->prober->start(self->prober);
     
     *out_if=&self->interface;
+    keypad_init_done=true;
     return ESP_OK;
         
 }
 
-/* ─────────────────────────────────────────────────────────────────────────────
- * ADD THIS to matrix_keypad_nkro.h  (public API section)
- * ───────────────────────────────────────────────────────────────────────────── */
-
-/**
- * @brief  Convert a key_event_t value to a human-readable C string.
- *
- * The returned pointer is to a string literal – never free it.
- *
- * @param  event   Any value of key_event_t
- * @return         "KEY_PRESSED" | "KEY_RELEASED" | "KEY_LONG_PRESSED" |
- *                 "KEY_REPEATED" | "UNKNOWN_EVENT"
- */
-const char *key_event_to_str(key_event_t event);
-
-
-/* ─────────────────────────────────────────────────────────────────────────────
- * ADD THIS to matrix_keypad_nkro.c  (implementation)
- * ───────────────────────────────────────────────────────────────────────────── */
-
+/// @brief Convert event id to string
+/// @param event 
+/// @return 
 const char *key_event_to_str(key_event_t event)
 {
     switch (event) {
