@@ -14,9 +14,6 @@
 #include "init.h"
 
 
-#define MAX_KEYPADS              CONFIG_MATRIX_KEYPAD_MAX_KEYPADS
-#define MAX_SIMULTANEOUS_KEYS    CONFIG_MATRIX_KEYPAD_MAX_SIMULTANEOUS_KEYS
-#define MAX_BUTTONS             (CONFIG_MATRIX_KEYPAD_MAX_COLS*CONFIG_MATRIX_KEYPAD_MAX_ROWS)
 
 //These #defines are internal
 //This first queue is the one that gets both scanner and timer events and passes to the corresponding button

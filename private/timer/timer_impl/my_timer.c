@@ -6,7 +6,7 @@
 #include "esp_log.h"
 #include "my_timer.h"
 
-#define     MAX_OBJECTS         CONFIG_MATRIX_KEYPAD_MAX_SIMULTANEOUS_KEYS   //inconsistency here, arguments passed  from main but not used
+
 
 static const char* TAG="timer impl";
 static void timer_callback(void* arg);
