@@ -235,9 +235,8 @@ Row3:
 Row4:
 ```
 
-Ghost path traced:
-
-        Col1          Col3
+```
+         Col1          Col3
           |             |
 Row1 ──>|──────────────[sw]─── Col3 wire  (Row1-Col3: real press ✅)
                         |
@@ -253,6 +252,7 @@ Row2 ──>|──[sw]────────[sw]
          ▼
     capture measures Row1 pulse width
     → Row1-Col1 reported as PRESSED (GHOST ❌)
+```
 Row1's signal leaks through the closed Row2-Col3 switch onto the Row2 wire, then escapes to Col1 through the closed Row2-Col1 switch. The capture channel on Col1 sees a valid Row1 pulse width and cannot distinguish it from a real press.
 
 ### What row diodes fix vs what they do not
