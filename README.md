@@ -1,4 +1,4 @@
-# esp-matrix-keypad
+# matrix-keypad-pwm
 
 ![ESP-IDF](https://img.shields.io/badge/ESP--IDF-v5.x-blue)
 ![Espressif Component Registry](https://img.shields.io/badge/Espressif-Component%20Registry-orange)
@@ -29,14 +29,14 @@ Instead of scanning rows one at a time, each row continuously drives a unique PW
 ### Using ESP-IDF Component Manager (Recommended)
 
 ```bash
-idf.py add-dependency "embedblocks/esp-matrix-keypad^1.0.0"
+idf.py add-dependency "embedblocks/matrix-keypad-pwm^1.0.0"
 ```
 
 Or in your project's `idf_component.yml`:
 
 ```yaml
 dependencies:
-  embedblocks/esp-matrix-keypad: "^1.0.0"
+  embedblocks/matrix-keypad-pwm: "^1.0.0"
 ```
 
 ---
@@ -237,24 +237,22 @@ Row4:
 
 Ghost path traced:
 
-```
-Row1 PWM ──>|──────────────────────[sw]── Col3  (real press, Row1-Col3)
-                                     |
-                                     │ Row1 signal leaks down Col3
-                                     ▼
-                              [sw Row2-Col3]  (closed) ──→ onto Row2 wire
-                                                                   |
-                                                                   │ travels along Row2
-                                                                   ▼
-                                                          [sw Row2-Col1] (closed) ──→ Col1
-                                                                                        |
-                                                                                        ▼
-                                                                               capture measures
-                                                                               Row1 pulse width
-                                                                               → Row1-Col1 reported
-                                                                                 as PRESSED (GHOST ❌)
-```
-
+        Col1          Col3
+          |             |
+Row1 ──>|──────────────[sw]─── Col3 wire  (Row1-Col3: real press ✅)
+                        |
+                        │ signal leaks down Col3
+                        ▼
+Row2 ──>|──[sw]────────[sw]
+         |              |
+         │ ◄────────────┘  signal travels LEFT along Row2 wire
+         │
+         ▼
+        Col1 wire
+         |
+         ▼
+    capture measures Row1 pulse width
+    → Row1-Col1 reported as PRESSED (GHOST ❌)
 Row1's signal leaks through the closed Row2-Col3 switch onto the Row2 wire, then escapes to Col1 through the closed Row2-Col1 switch. The capture channel on Col1 sees a valid Row1 pulse width and cannot distinguish it from a real press.
 
 ### What row diodes fix vs what they do not
