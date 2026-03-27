@@ -414,7 +414,9 @@ int keypadCreate(keypad_config_t* config, keypad_interface_t** out_if){
     ESP_LOGI(TAG,"timer %d",ret);
     ret=configTimerPool(&self->timer_pool,self->timers,config->max_simultaneous_keys);
     ESP_LOGI(TAG,"timer pool %d",ret);
-    ret=configKeypadButtons(self->button,self->keymap,total_buttons,self->timer_pool,self->prober->getTimePeriod(),buttonEventHandler,(void*)self);
+
+    ESP_LOGI(TAG,"button %lu  %lu",config->long_press_duration_us,config->repeat_press_duration_us);
+    ret=configKeypadButtons(self->button,self->keymap,total_buttons,self->timer_pool,self->prober->getTimePeriod(),config->long_press_duration_us,config->repeat_press_duration_us,buttonEventHandler,(void*)self);
     ESP_LOGI(TAG,"button %d",ret);
 
     self->mp_event_queue.handle=xQueueCreateStatic(MAX_INTERNAL_EVENT_QUEUE_ELEMENTS,sizeof(mp_event_data_t),self->mp_event_queue.buff,&self->mp_event_queue.queue_meta_data);

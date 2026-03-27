@@ -13,6 +13,8 @@ esp_err_t configKeypadButtons(button_interface_t** buttons,
                                 uint8_t total_buttons,
                                 pool_alloc_interface_t* timer_pool,
                                 uint32_t prober_time_period,
+                                uint32_t long_press_duration,
+                                uint32_t repeat_press_duration,
                                 buttonCallBack buttonEventHandler,
                                 void* context){
 
@@ -22,6 +24,8 @@ esp_err_t configKeypadButtons(button_interface_t** buttons,
     config.cb=buttonEventHandler;
     config.context=(void*)context;
     config.timer_pool=timer_pool;
+    config.long_press_duration_us=long_press_duration;
+    config.repeat_press_duration_us=repeat_press_duration;
     
     
     

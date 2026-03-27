@@ -55,6 +55,8 @@ typedef struct button_config{
     pool_alloc_interface_t* timer_pool;           //to allocate and deallocate the timer object
     uint32_t scan_time_period;     //Button if pressed, its value must come in this time duration, if no presseed event comes, then button is released
     buttonCallBack cb;          //Callback to call  on a major event
+    uint32_t long_press_duration_us;
+    uint32_t repeat_press_duration_us;
     void* context;  //To know which use (keypad) instance it belongs to
 }button_config_t;
 

@@ -59,6 +59,8 @@ typedef struct {
     uint8_t        *col_gpios;   // [total_cols]
     uint8_t         total_cols;
     uint8_t         max_simultaneous_keys;
+    uint32_t        long_press_duration_us;
+    uint32_t        repeat_press_duration_us;
     keypadCallback  cb;
 } keypad_config_t;
 

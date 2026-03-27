@@ -14,10 +14,13 @@
 
 
 
-esp_err_t configKeypadButtons(button_interface_t** buttons,                               uint8_t* keymap,
+esp_err_t configKeypadButtons(button_interface_t** buttons,
+                                uint8_t* keymap,
                                 uint8_t total_buttons,
                                 pool_alloc_interface_t* timer_pool,
                                 uint32_t prober_time_period,
+                                uint32_t long_press_duration,
+                                uint32_t repeat_press_duration,
                                 buttonCallBack buttonEventHandler,
                                 void* context);
 

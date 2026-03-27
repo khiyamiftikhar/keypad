@@ -43,6 +43,8 @@ typedef struct keypad_button{
     void* timer_pool;           //to allocate and deallocate the timer object
     uint32_t time_period;       //The time period for the timer.
     uint32_t previous_time;     //For keeping track of debouncing duration and long press
+    uint32_t long_press_duration_us;
+    uint32_t repeat_press_duration_us;
     button_state_t state;
     bool long_pressed;
     buttonCallBack cb;        
@@ -107,6 +109,7 @@ static int buttonStateUpdateEventHandler(button_interface_t* self,button_state_u
 
     
     pool_alloc_interface_t* timer_pool = (pool_alloc_interface_t*) btn->timer_pool;
+
 
 
     if(btn->timer==NULL){
@@ -230,7 +233,7 @@ static int buttonStateUpdateEventHandler(button_interface_t* self,button_state_u
         case BUTTON_STATE_PRESSED:
                                     if(evt==BUTTON_STATE_EVENT_PRESSED){
                                         //ESP_LOGI(TAG,"pt %"PRIu32 " ct %"PRIu32 " diff %"PRIu32,current_time,*previous_time,current_time-*previous_time);
-                                        if((current_time-*previous_time)>LONG_PRESS_DURATION){
+                                        if((current_time-*previous_time)>btn->long_press_duration_us){
                                             next_button_state=BUTTON_STATE_PRESSED_LONG;
                                             
 
@@ -260,7 +263,7 @@ static int buttonStateUpdateEventHandler(button_interface_t* self,button_state_u
         case BUTTON_STATE_PRESSED_LONG:
                                     if(evt==BUTTON_STATE_EVENT_PRESSED){
                                         //ESP_LOGI(TAG,"pt %"PRIu32 " ct %"PRIu32 " diff %"PRIu32,current_time,*previous_time,current_time-*previous_time);
-                                        if((current_time-*previous_time)>REPEAT_PRESS_DURATION){
+                                        if((current_time-*previous_time)>btn->repeat_press_duration_us){
                                              //Again record time for repeat press detection
                                              //This info must be propagated to user
                                             *previous_time=timer->timerGetCurrentTime();
@@ -394,6 +397,10 @@ button_interface_t* keypadButtonCreate(button_config_t* config){
     self->button_index=button_index;
     self->state=BUTTON_STATE_IDLE;
     self->time_period=scan_time_period;                   //in microseconds , must be greater than prober time  period
+    self->long_press_duration_us=config->long_press_duration_us;
+    self->repeat_press_duration_us=config->repeat_press_duration_us;
+
+    
 
     
     self->timer_pool=config->timer_pool;
