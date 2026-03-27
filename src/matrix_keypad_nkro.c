@@ -329,52 +329,101 @@ static void keypadControlLogs(){
 }
 
 
+#define KEYPAD_MIN_LONG_PRESS_US   100000      // 100 ms
+#define KEYPAD_MIN_REPEAT_US       100000      // 100 ms
+#define KEYPAD_MAX_DURATION_US     60000000   // 60 sec
+
 static esp_err_t keypadValidateConfig(const keypad_config_t *cfg)
 {
-    // 1. Check config pointer
     if (cfg == NULL) {
+        ESP_LOGE(TAG, "Config pointer is NULL");
         return ESP_ERR_INVALID_ARG;
     }
 
-    // 2. Basic pointer checks
     if (cfg->keymap == NULL) {
+        ESP_LOGE(TAG, "keymap is NULL");
         return ESP_ERR_INVALID_ARG;
     }
 
     if (cfg->row_gpios == NULL) {
+        ESP_LOGE(TAG, "row_gpios is NULL");
         return ESP_ERR_INVALID_ARG;
     }
 
     if (cfg->col_gpios == NULL) {
+        ESP_LOGE(TAG, "col_gpios is NULL");
         return ESP_ERR_INVALID_ARG;
     }
 
     if (cfg->cb == NULL) {
+        ESP_LOGE(TAG, "callback function (cb) is NULL");
         return ESP_ERR_INVALID_ARG;
     }
 
-    // 3. Size checks
-    if (cfg->total_rows == 0 || cfg->total_cols == 0) {
+    if (cfg->total_rows == 0) {
+        ESP_LOGE(TAG, "total_rows cannot be 0");
         return ESP_ERR_INVALID_ARG;
     }
 
-    // 4. Prevent overflow (important!)
+    if (cfg->total_cols == 0) {
+        ESP_LOGE(TAG, "total_cols cannot be 0");
+        return ESP_ERR_INVALID_ARG;
+    }
+
     uint16_t total_keys = (uint16_t)cfg->total_rows * (uint16_t)cfg->total_cols;
 
     if (total_keys == 0) {
+        ESP_LOGE(TAG, "total_keys overflow or invalid (rows=%u, cols=%u)",
+                 cfg->total_rows, cfg->total_cols);
         return ESP_ERR_INVALID_ARG;
     }
 
-    // 5. Logical constraints
-    if (cfg->max_simultaneous_keys == 0 ||
-        cfg->max_simultaneous_keys > total_keys) {
+    if (cfg->max_simultaneous_keys == 0) {
+        ESP_LOGE(TAG, "max_simultaneous_keys cannot be 0");
         return ESP_ERR_INVALID_ARG;
     }
 
+    if (cfg->max_simultaneous_keys > total_keys) {
+        ESP_LOGE(TAG, "max_simultaneous_keys (%u) exceeds total keys (%u)",
+                 cfg->max_simultaneous_keys, total_keys);
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    // ---- Timing validation ----
+
+    if (cfg->long_press_duration_us < KEYPAD_MIN_LONG_PRESS_US) {
+        ESP_LOGE(TAG, "long_press_duration_us too small (%lu us). Min: %u us",
+                 (unsigned long)cfg->long_press_duration_us,
+                 KEYPAD_MIN_LONG_PRESS_US);
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (cfg->long_press_duration_us > KEYPAD_MAX_DURATION_US) {
+        ESP_LOGE(TAG, "long_press_duration_us too large (%lu us). Max: %u us",
+                 (unsigned long)cfg->long_press_duration_us,
+                 KEYPAD_MAX_DURATION_US);
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (!cfg->auto_repeat_disable) {
+
+        if (cfg->repeat_press_duration_us < KEYPAD_MIN_REPEAT_US) {
+            ESP_LOGE(TAG, "repeat_press_duration_us too small (%lu us). Min: %u us",
+                     (unsigned long)cfg->repeat_press_duration_us,
+                     KEYPAD_MIN_REPEAT_US);
+            return ESP_ERR_INVALID_ARG;
+        }
+
+        if (cfg->repeat_press_duration_us > KEYPAD_MAX_DURATION_US) {
+            ESP_LOGE(TAG, "repeat_press_duration_us too large (%lu us). Max: %u us",
+                     (unsigned long)cfg->repeat_press_duration_us,
+                     KEYPAD_MAX_DURATION_US);
+            return ESP_ERR_INVALID_ARG;
+        }
+    }
 
     return ESP_OK;
 }
-
 int keypadCreate(keypad_config_t* config, keypad_interface_t** out_if){
 
 
