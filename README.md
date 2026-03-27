@@ -1,129 +1,142 @@
 # esp-matrix-keypad
 
-**PWM-driven matrix keypad driver for ESP-IDF with hardware-assisted simultaneous key detection.**
+![ESP-IDF](https://img.shields.io/badge/ESP--IDF-v5.x-blue)
+![Espressif Component Registry](https://img.shields.io/badge/Espressif-Component%20Registry-orange)
+![License](https://img.shields.io/badge/license-MIT-green)
 
-This component uses **interleaved pulse-width encoding on row lines** and **MCPWM capture on column lines** to detect key presses without traditional scanning. Each row continuously drives a unique PWM waveform, allowing key identification by measuring pulse width on the column.
-So multiple key presses on a column are correctly detected
+ESP-IDF component for **matrix keypads with hardware-assisted simultaneous key detection**.
 
-> ⚠️ Note: As with all passive matrix keypads without per-switch diodes, **ghosting may occur** under certain multi-key combinations.
+Instead of scanning rows one at a time, each row continuously drives a unique PWM pulse width. Column lines are connected to MCPWM capture channels. Any keypress is identified by measuring the pulse width that arrives on the column — no polling loop, no scan delay.
+
+> ⚠️ As with all passive matrix keypads without per-switch diodes, **ghosting may occur** under certain multi-key combinations. See the Ghosting section below.
 
 ---
 
-## 🚀 Why This Approach?
+## Features
 
-Unlike traditional row-scanning keypads:
+- **No row scanning** — all rows drive simultaneously
+- **Multiple keys detected in parallel** across columns
+- **Same-column multi-key** — interleaved PWM signals decoded independently
+- Hardware-assisted timing via MCPWM capture peripheral
+- Configurable **long press**, **repeat**, and **simultaneous key** limits
+- **Callback-based API** — key pressed, long pressed, repeated, released
+- Single instance, up to **6 column lines** (hardware limit)
 
-- No row multiplexing loop (no scan delay)
-- Multiple keys detected **in parallel**
-- Hardware-assisted timing using MCPWM capture
-- Supports **multiple keys on the same column** via waveform interleaving
-- Lower CPU involvement compared to polling-based designs
+---
+
+## Installation
+
+### Using ESP-IDF Component Manager (Recommended)
+
+```bash
+idf.py add-dependency "embedblocks/esp-matrix-keypad^1.0.0"
+```
+
+Or in your project's `idf_component.yml`:
+
+```yaml
+dependencies:
+  embedblocks/esp-matrix-keypad: "^1.0.0"
+```
 
 ---
 
 ## How It Works
 
-- Each row outputs a **unique PWM pulse width**  
-  (e.g. Row1 = 2000 µs, Row2 = 2400 µs, Row3 = 2800 µs, Row4 = 3200 µs)
+Each row GPIO outputs a continuous PWM signal with a unique pulse width:
 
-- Each column is connected to an **MCPWM capture channel**
+```
+Row1 GPIO → 2000 µs pulse width
+Row2 GPIO → 2400 µs pulse width
+Row3 GPIO → 2800 µs pulse width
+Row4 GPIO → 3200 µs pulse width
+```
 
-- When a key is pressed:
-  - The row signal propagates to the column
-  - The capture unit measures pulse width
-  - The originating row is identified
+When a key is pressed, the row signal reaches the column wire. The MCPWM capture channel on that column measures the pulse width and identifies which row it came from:
 
-- Multiple simultaneous presses:
-  - **Different columns** → independent capture channels
-  - **Same column** → interleaved PWM signals are decoded separately
+```
+Row GPIO ──>|──[btn]──┐
+                      │  Column wire
+                      ├── MCPWM capture
+                      │
+            measure pulse width → match row → fire callback
+```
+
+### Multiple keys on different columns
+
+Each column has its own independent capture channel. Presses are detected fully in parallel:
+
+```
+Col1 capture  →  Row2 signal  →  KEY (Row2, Col1) ✓
+Col3 capture  →  Row4 signal  →  KEY (Row4, Col3) ✓   simultaneously
+```
+
+### Multiple keys on the same column
+
+Two pressed buttons in the same column produce **interleaved PWM** on that wire. Both waveforms are captured and decoded independently:
+
+```
+Col1 wire:  ─┐  ┌──┐  ┌─┐  ┌──┐  ┌─
+             └──┘  └──┘ └──┘  └──┘
+
+             ←2000µs→←2400µs→← ...
+
+Decoded:   Row1 pulse ✓    Row2 pulse ✓
+```
 
 ---
 
 ## ⚠️ Row Diodes Are Required
 
-Each row output **must include a series diode** before entering the switch matrix.
+Each row output **must have a series diode** (anode toward GPIO, cathode into matrix) before entering the switch matrix.
 
-### Why this is required
+```
+Row GPIO ──>|── switch matrix
+```
 
-This design allows multiple PWM signals to share a column wire.
+### Why
 
-When multiple keys in the same column are pressed:
+When multiple keys in the same column are pressed simultaneously, the row GPIOs share a common column wire. Without diodes, a HIGH row driver contends directly against a LOW row driver through the closed switches — distorting the PWM signal and risking GPIO damage over time.
 
-Without diodes:
-- Row GPIOs **drive into each other**
-- PWM signals become **distorted or collapse**
-- Multiple keys on the same column **cannot be reliably detected**
-- Risk of **GPIO damage** due to contention
+With diodes, each row signal is electrically isolated. Multiple PWM waveforms coexist on the column wire without contention and are decoded correctly.
 
-With diodes:
-- Row signals are **electrically isolated**
-- Multiple PWM waveforms can **coexist on the same column**
-- Capture decoding works correctly
-- GPIOs are protected
-
-### Important distinction
-
-- Row diodes → required for **correct operation and signal integrity** ✅  
-- Row diodes → do **not eliminate ghosting** ❌  
-- Per-switch diodes → required for **full NKRO (no ghosting)** ✅  
-
----
-
-## Hardware Requirements
-
-### Recommended Diodes
+### Recommended Parts
 
 | Component | Part Number | Package |
-|----------|------------|--------|
-| Signal diode | 1N4148 | DO-35 |
-| SMD version | 1N4148W | SOD-123 |
-| Low-drop option | BAT43 | DO-35 |
-
----
+|-----------|-------------|---------|
+| Signal diode | **1N4148** | DO-35 (through-hole) |
+| SMD version | **1N4148W** | SOD-123 |
+| Low-drop option | **BAT43** | DO-35 (0.3V drop vs 0.6V) |
 
 ### Column Pull-Down
 
-Each column GPIO should have a **pull-down resistor**:
+Each column capture GPIO needs a pull-down to GND. The diodes only pull the column HIGH — when no button is pressed the line must return to LOW cleanly.
 
-- Internal (~45kΩ) → acceptable  
-- External 10kΩ → recommended for cleaner signals  
+- Internal ESP32 pull-down (~45 kΩ) → acceptable
+- External 10 kΩ to GND → recommended for cleaner edges
 
 ---
 
-## 🔌 Full Matrix Wiring Diagram
+## Wiring Diagram
 
 ```
                          1N4148
 Row1 GPIO (2000µs PWM) ──>|──┬──[btn]──┬──[btn]──┬──[btn]──┬──[btn]──┐
-                             |          |          |          |       |
+                             |          |          |          |         |
 Row2 GPIO (2400µs PWM) ──>|──┤  [btn]──┤  [btn]──┤  [btn]──┤  [btn]──┤
-                             |          |          |          |       |
+                             |          |          |          |         |
 Row3 GPIO (2800µs PWM) ──>|──┤  [btn]──┤  [btn]──┤  [btn]──┤  [btn]──┤
-                             |          |          |          |       |
+                             |          |          |          |         |
 Row4 GPIO (3200µs PWM) ──>|──┘  [btn]──┘  [btn]──┘  [btn]──┘  [btn]──┘
                                   |          |          |          |
                                Col1 GPIO  Col2 GPIO  Col3 GPIO  Col4 GPIO
                               (Capture)  (Capture)  (Capture)  (Capture)
-                              
+                              + 10k pd   + 10k pd   + 10k pd   + 10k pd
 ```
 
 ---
 
-## Software Setup
-
-### CMake
-
-```cmake
-idf_component_register(
-    SRCS "main.c"
-    INCLUDE_DIRS "."
-    REQUIRES esp-pwm-keypad
-)
-```
-
----
-
-### Usage Example
+## Usage
 
 ```c
 #include "keypad.h"
@@ -142,23 +155,23 @@ void app_main(void)
     uint8_t col_gpios[] = { 18, 19, 22, 23 };
 
     keypad_config_t config = {
-    .auto_repeat_disable=true,  //Will not generate repeat events (when button is kept pressed beyond long press)
-    .max_simultaneous_keys=5,
-    .cb         = keyPadHandler,
-    .col_gpios  = col_gpios,
-    .row_gpios  = row_gpios,
-    .total_cols = 4,
-    .total_rows = 4,
-    .long_press_duration_us=2000000,      //2000000 us so 2s
-    .repeat_press_duration_us=3000000,      // 1 second
-    .keymap     = (uint8_t[]){
-                    '1','2','3','A',
-                    '4','5','6','B',
-                    '7','8','9','C',
-                    '*','0','#','D'
-                  }
-        };
-
+        .auto_repeat_disable      = false,
+        .max_simultaneous_keys    = 3,
+        .long_press_duration_us   = 2000000,   /* 2 s  */
+        .repeat_press_duration_us = 1000000,   /* 1 s  */
+        .cb                       = keyPadHandler,
+        .context                  = NULL,
+        .row_gpios                = row_gpios,
+        .total_rows               = 4,
+        .col_gpios                = col_gpios,
+        .total_cols               = 4,
+        .keymap                   = (uint8_t[]){
+                                      '1','2','3','A',
+                                      '4','5','6','B',
+                                      '7','8','9','C',
+                                      '*','0','#','D'
+                                    },
+    };
 
     keypad_interface_t *keypad;
     ESP_ERROR_CHECK(keypadCreate(&config, &keypad));
@@ -169,17 +182,19 @@ void app_main(void)
 
 ## Configuration Reference
 
-| Field | Description |
-|------|------------|
-| keymap | Row-major string (`rows × cols` length) |
-| row_gpios | Row output GPIOs (PWM) |
-| col_gpios | Column input GPIOs (capture) |
-| max_simultaneous_keys | Max tracked keys |
-| auto_repeat_disable | Disable repeat events |
-| long_press_ms | Long press threshold |
-| repeat_interval_ms | Repeat interval |
-| cb | Event callback |
-| context | User pointer |
+| Field | Type | Description |
+|-------|------|-------------|
+| `keymap` | `uint8_t *` | Flat row-major array of key characters, length `total_rows × total_cols` |
+| `row_gpios` | `uint8_t *` | GPIO numbers for row outputs (PWM drivers) |
+| `total_rows` | `uint8_t` | Number of rows |
+| `col_gpios` | `uint8_t *` | GPIO numbers for column inputs (MCPWM capture) |
+| `total_cols` | `uint8_t` | Number of columns |
+| `max_simultaneous_keys` | `uint8_t` | Maximum concurrent keypresses to track |
+| `auto_repeat_disable` | `bool` | `true` to suppress repeat events while a key is held |
+| `long_press_duration_us` | `uint32_t` | Hold time before `KEY_LONG_PRESSED` fires (µs) |
+| `repeat_press_duration_us` | `uint32_t` | Interval between `KEY_REPEATED` events (µs) |
+| `cb` | `keypadCallback` | Event callback |
+| `context` | `void *` | User pointer passed back in every callback — avoids globals |
 
 ---
 
@@ -192,61 +207,87 @@ typedef enum {
     KEY_REPEATED,
     KEY_RELEASED,
 } key_event_t;
+
+typedef struct {
+    uint8_t  key_id;            /* character from keymap                     */
+    uint8_t  row;               /* 0-based row index                         */
+    uint8_t  col;               /* 0-based column index                      */
+    uint32_t time_stamp;        /* FreeRTOS tick in ms                       */
+    uint32_t hold_duration_ms;  /* time held since KEY_PRESSED (0 on press)  */
+} keypad_event_data_t;
 ```
-
----
-
-## Multi-Key Behaviour and Limitations
-
-- Multiple keys across columns → fully supported  
-- Multiple keys in same column → supported (requires row diodes)  
-- No scanning delay → all rows active simultaneously  
-
-⚠️ However:
-
-- Ghosting may occur in standard matrix wiring
-- This is a **hardware limitation**, not a software issue
 
 ---
 
 ## ⚠️ Ghosting (Hardware Limitation)
 
-Ghosting occurs when unintended electrical paths form through pressed switches.
+Ghosting is a fundamental property of passive matrix keypads. **No software can eliminate it** — only per-switch diodes (one per button, custom PCB) can.
 
-### Example
+### How it happens
 
-Pressed keys:
-- (Row1, Col3)
-- (Row4, Col1)
-- (Row4, Col3)
-
-This creates a path:
+Consider two buttons pressed on Row2 and one on Row1:
 
 ```
-Row1 → Col3 → Row4 → Col1
+         Col1     Col2     Col3     Col4
+Row1:     ?                 X              ← only Col3 physically pressed
+Row2:     X                 X              ← Col1 and Col3 physically pressed
+Row3:
+Row4:
 ```
 
-Result:
-- (Row1, Col1) appears falsely pressed
+Ghost path traced:
 
-### Important
+```
+Row1 PWM ──>|──────────────────────[sw]── Col3  (real press, Row1-Col3)
+                                     |
+                                     │ Row1 signal leaks down Col3
+                                     ▼
+                              [sw Row2-Col3]  (closed) ──→ onto Row2 wire
+                                                                   |
+                                                                   │ travels along Row2
+                                                                   ▼
+                                                          [sw Row2-Col1] (closed) ──→ Col1
+                                                                                        |
+                                                                                        ▼
+                                                                               capture measures
+                                                                               Row1 pulse width
+                                                                               → Row1-Col1 reported
+                                                                                 as PRESSED (GHOST ❌)
+```
 
-- PWM decoding **cannot distinguish ghost paths**
-- The signal appears electrically valid
+Row1's signal leaks through the closed Row2-Col3 switch onto the Row2 wire, then escapes to Col1 through the closed Row2-Col1 switch. The capture channel on Col1 sees a valid Row1 pulse width and cannot distinguish it from a real press.
 
-### How to eliminate ghosting
+### What row diodes fix vs what they do not
 
-- Add **one diode per switch** (not just per row)
+| Protection | Row diodes | Per-switch diodes |
+|------------|-----------|-------------------|
+| GPIO driver contention | ✅ | ✅ |
+| GPIO damage from contention | ✅ | ✅ |
+| Ghosting | ❌ | ✅ |
+
+Row diodes block Row signals from backdriving each other's GPIO outputs — but the ghost path travels entirely through the switch matrix wire between the diode and the switches, which the row diode cannot block.
 
 ---
 
-## MCPWM Capture Resources
+## Chip Support
 
-| Chip | Channels |
-|------|---------|
-| ESP32 | 6 |
-| ESP32-S3 | 6 |
-| ESP32-C3 | 3 |
+| Chip | Status | Capture Channels |
+|------|--------|-----------------|
+| ESP32 | ✅ Tested | 6 (2 groups × 3) |
+| ESP32-S3 | ⚠️ Expected to work | 6 (2 groups × 3) |
+| ESP32-C3 | ⚠️ Expected to work | 3 (1 group × 3) |
+| ESP32-H2 | ⚠️ Expected to work | 3 (1 group × 3) |
+
+A 4×4 keypad (4 columns) fits on all variants. A 4×6 keypad (6 columns) requires ESP32 or S3.
+
+---
+
+## Limitations
+
+- **Single instance** — only one keypad per application
+- Maximum **6 column lines** (MCPWM hardware limit)
+- Ghosting is a hardware property of passive matrix keypads — see Ghosting section above
+- Only ESP32 has been fully validated; other chips expected to work based on driver compatibility
 
 ---
 
