@@ -207,13 +207,11 @@ typedef enum {
     KEY_RELEASED,
 } key_event_t;
 
-typedef struct {
-    uint8_t  key_id;            /* character from keymap                     */
-    uint8_t  row;               /* 0-based row index                         */
-    uint8_t  col;               /* 0-based column index                      */
-    uint32_t time_stamp;        /* FreeRTOS tick in ms                       */
-    uint32_t hold_duration_ms;  /* time held since KEY_PRESSED (0 on press)  */
-} keypad_event_data_t;
+typedef struct{
+    key_event_t event;
+    uint8_t key_id;
+    uint32_t time_stamp;
+}keypad_event_data_t;
 ```
 
 ---
